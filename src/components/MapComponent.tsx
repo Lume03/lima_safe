@@ -1,3 +1,4 @@
+
 // Ensure you have a .env.local file with NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="YOUR_API_KEY"
 'use client';
 
@@ -8,9 +9,25 @@ import type { District, PathSegment } from '@/types';
 import { getDangerColor } from '@/lib/graph';
 import { MapPin } from 'lucide-react';
 
-// Dynamically import Polyline
+// Dynamically import Polyline with a fallback
 const Polyline = dynamic(
-  () => import('@vis.gl/react-google-maps').then(mod => mod.Polyline),
+  async () => {
+    try {
+      const mod = await import('@vis.gl/react-google-maps');
+      if (mod && (typeof mod.Polyline === 'function' || typeof mod.Polyline === 'object')) {
+        // Check if it's a function (class/functional component) or an object (e.g. from forwardRef)
+        return mod.Polyline;
+      }
+      console.warn(
+        '@vis.gl/react-google-maps: Polyline component not found or invalid. Polylines will not be rendered. Module content:',
+        mod
+      );
+    } catch (error) {
+      console.error('Error importing Polyline from @vis.gl/react-google-maps:', error);
+    }
+    // Return a dummy component that renders nothing if Polyline is not found or fails to import
+    return () => null;
+  },
   { ssr: false }
 );
 
