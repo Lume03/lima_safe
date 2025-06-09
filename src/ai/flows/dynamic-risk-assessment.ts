@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -14,26 +15,26 @@ import {z} from 'genkit';
 const AdjustRiskWeightsInputSchema = z.object({
   distanceWeight: z
     .number()
-    .describe('The current weight for distance (alpha) in the path calculation. Value between 0 and 1.'),
+    .describe('El peso actual para la distancia (alfa) en el cálculo de la ruta. Valor entre 0 y 1.'),
   safetyWeight: z
     .number()
-    .describe('The current weight for safety (beta) in the path calculation. Value between 0 and 1.'),
+    .describe('El peso actual para la seguridad (beta) en el cálculo de la ruta. Valor entre 0 y 1.'),
   allDistrictNames: z
     .array(z.string())
-    .describe('A list of all available district names in Lima for context when analyzing news.'),
+    .describe('Una lista de todos los nombres de distritos disponibles en Lima para contexto al analizar noticias.'),
 });
 export type AdjustRiskWeightsInput = z.infer<typeof AdjustRiskWeightsInputSchema>;
 
 const AdjustRiskWeightsOutputSchema = z.object({
   adjustedDistanceWeight: z
     .number()
-    .describe('The AI-suggested adjusted weight for distance (alpha). Must be between 0 and 1.'),
+    .describe('El peso ajustado sugerido por la IA para la distancia (alfa). Debe estar entre 0 y 1.'),
   adjustedSafetyWeight: z
     .number()
-    .describe('The AI-suggested adjusted weight for safety (beta). Must be between 0 and 1. The sum of adjustedDistanceWeight and adjustedSafetyWeight MUST be 1.0.'),
+    .describe('El peso ajustado sugerido por la IA para la seguridad (beta). Debe estar entre 0 y 1. La suma de adjustedDistanceWeight y adjustedSafetyWeight DEBE ser 1.0.'),
   reason: z
     .string()
-    .describe('The reason for adjusting the distance and safety weights, based on news analysis.'),
+    .describe('La razón para ajustar los pesos de distancia y seguridad, basada en el análisis de noticias.'),
 });
 export type AdjustRiskWeightsOutput = z.infer<typeof AdjustRiskWeightsOutputSchema>;
 
@@ -43,24 +44,24 @@ export async function adjustRiskWeights(input: AdjustRiskWeightsInput): Promise<
 
 const analyzeNewsTool = ai.defineTool({
   name: 'analyzeNews',
-  description: 'Analyzes recent news and public safety incidents related to a given list of Lima districts. Use this tool to understand current safety conditions.',
+  description: 'Analiza noticias recientes e incidentes de seguridad pública relacionados con una lista dada de distritos de Lima. Usa esta herramienta para entender las condiciones actuales de seguridad.',
   inputSchema: z.object({
-    districts: z.array(z.string()).describe('List of Lima district names to analyze news for. Can be a subset of all districts if only specific ones are relevant.'),
+    districts: z.array(z.string()).describe('Lista de nombres de distritos de Lima para analizar noticias. Puede ser un subconjunto de todos los distritos si solo algunos específicos son relevantes.'),
   }),
-  outputSchema: z.string().describe('A summary of recent news and public safety incidents affecting the safety of the provided districts. Mentions which districts have increased or decreased risk if notable events are found.'),
+  outputSchema: z.string().describe('Un resumen de noticias recientes e incidentes de seguridad pública que afectan la seguridad de los distritos proporcionados. Menciona qué distritos tienen riesgo aumentado o disminuido si se encuentran eventos notables.'),
 }, async (input) => {
   // This is a placeholder. In a real application, this would fetch and analyze news data.
   // For now, it simulates finding some news.
   if (input.districts.length === 0) {
-    return "No districts provided for news analysis.";
+    return "No se proporcionaron distritos para el análisis de noticias.";
   }
-  const highRiskDistricts = ["Lima Centro", "La Victoria"]; // Example
+  const highRiskDistricts = ["Lima Centro", "La Victoria", "Callao", "San Juan de Lurigancho"]; // Example
   const relevantDistrictsWithNews = input.districts.filter(d => highRiskDistricts.includes(d));
 
   if (relevantDistrictsWithNews.length > 0) {
-    return `Simulated news analysis: Increased public safety incidents recently reported in ${relevantDistrictsWithNews.join(', ')}. Consider increasing safety weight. Other analyzed districts report normal activity.`;
+    return `Análisis de noticias simulado: Se han reportado recientemente incidentes de seguridad pública incrementados en ${relevantDistrictsWithNews.join(', ')}. Considera aumentar el peso de seguridad. Otros distritos analizados reportan actividad normal.`;
   }
-  return `Simulated news analysis: No major public safety incidents reported recently in the analyzed districts: ${input.districts.join(', ')}. Current safety weights seem appropriate or may only need minor adjustments.`;
+  return `Análisis de noticias simulado: No se han reportado incidentes mayores de seguridad pública recientemente en los distritos analizados: ${input.districts.join(', ')}. Los pesos de seguridad actuales parecen apropiados o podrían necesitar solo ajustes menores.`;
 });
 
 const adjustRiskWeightsPrompt = ai.definePrompt({
@@ -68,27 +69,27 @@ const adjustRiskWeightsPrompt = ai.definePrompt({
   input: {schema: AdjustRiskWeightsInputSchema},
   output: {schema: AdjustRiskWeightsOutputSchema},
   tools: [analyzeNewsTool],
-  prompt: `You are an AI assistant that helps adjust the weights for distance (alpha) and safety (beta) in a path calculation algorithm for routes in Lima, Peru.
-The sum of alpha and beta MUST always be 1.0.
+  prompt: `Eres un asistente de IA que ayuda a ajustar los pesos para la distancia (alfa) y la seguridad (beta) en un algoritmo de cálculo de rutas para Lima, Perú.
+La suma de alfa y beta SIEMPRE DEBE ser 1.0.
 
-Current weights:
-Distance Weight (alpha): {{{distanceWeight}}}
-Safety Weight (beta): {{{safetyWeight}}}
+Pesos actuales:
+Peso de Distancia (alfa): {{{distanceWeight}}}
+Peso de Seguridad (beta): {{{safetyWeight}}}
 
-You have access to a tool called 'analyzeNews' which you can use to analyze recent news and public safety incidents for Lima districts.
-A list of all available district names for context is: {{#each allDistrictNames}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}.
-You can pass a list of specific district names (e.g., just the origin and destination if they are known, or a broader set) to the 'analyzeNews' tool.
+Tienes acceso a una herramienta llamada 'analyzeNews' que puedes usar para analizar noticias recientes e incidentes de seguridad pública para los distritos de Lima.
+Una lista de todos los nombres de distritos disponibles para contexto es: {{#each allDistrictNames}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}.
+Puedes pasar una lista de nombres de distritos específicos (p. ej., solo el origen y destino si se conocen, o un conjunto más amplio) a la herramienta 'analyzeNews'.
 
-Based on your analysis of recent news (using the 'analyzeNews' tool):
-- If news suggests increased risk in relevant areas, you should generally INCREASE the safetyWeight (beta) and DECREASE the distanceWeight (alpha).
-- If news suggests improved safety or no significant negative incidents, you might slightly decrease safetyWeight or keep weights stable.
-- The magnitude of adjustment should be sensible. Drastic changes require significant justification from the news.
+Basado en tu análisis de noticias recientes (usando la herramienta 'analyzeNews'):
+- Si las noticias sugieren un riesgo incrementado en áreas relevantes, generalmente deberías AUMENTAR el safetyWeight (beta) y DISMINUIR el distanceWeight (alfa).
+- Si las noticias sugieren una mejora en la seguridad o ningún incidente negativo significativo, podrías disminuir ligeramente el safetyWeight o mantener los pesos estables.
+- La magnitud del ajuste debe ser sensata. Cambios drásticos requieren una justificación significativa de las noticias.
 
-Your primary goal is to recommend new alpha and beta weights.
-Critically, ensure that the 'adjustedDistanceWeight' (new alpha) and 'adjustedSafetyWeight' (new beta) in your output sum to exactly 1.0. For example, if you decide safety is more important, you might return 0.3 for distance and 0.7 for safety.
+Tu objetivo principal es recomendar nuevos pesos alfa y beta.
+Críticamente, asegúrate de que 'adjustedDistanceWeight' (nuevo alfa) y 'adjustedSafetyWeight' (nuevo beta) en tu salida sumen exactamente 1.0. Por ejemplo, si decides que la seguridad es más importante, podrías devolver 0.3 para distancia y 0.7 para seguridad.
 
-Provide a clear 'reason' for your recommendation, referencing the (simulated) news findings.
-If you decide not to change the weights, return the original weights and state that no change is needed based on the current news.
+Proporciona una 'razón' clara para tu recomendación, haciendo referencia a los hallazgos de noticias (simuladas).
+Si decides no cambiar los pesos, devuelve los pesos originales e indica que no se necesita ningún cambio basado en las noticias actuales.
 `,
 });
 
@@ -99,27 +100,21 @@ const adjustRiskWeightsFlow = ai.defineFlow(
     outputSchema: AdjustRiskWeightsOutputSchema,
   },
   async (input) => {
-    // The LLM will decide if and how to use the analyzeNewsTool based on the prompt.
-    // We pass allDistrictNames in the input to the prompt, so the LLM is aware of them.
     const {output} = await adjustRiskWeightsPrompt(input);
     
-    // Basic validation or normalization of AI output, though the prompt strongly guides it.
     if (output) {
         let { adjustedDistanceWeight, adjustedSafetyWeight } = output;
         const sum = adjustedDistanceWeight + adjustedSafetyWeight;
-        if (Math.abs(sum - 1.0) > 0.001 && sum !== 0) { // Tolerance for floating point, avoid division by zero
+        if (Math.abs(sum - 1.0) > 0.001 && sum !== 0) { 
             adjustedDistanceWeight = adjustedDistanceWeight / sum;
-            adjustedSafetyWeight = 1.0 - adjustedDistanceWeight; // Ensure sum is exactly 1
-            output.reason += " (Output weights normalized to sum to 1.0 by system)."
-        } else if (sum === 0) { // Handle case where AI returns 0 for both
+            adjustedSafetyWeight = 1.0 - adjustedDistanceWeight; 
+            output.reason += " (Pesos de salida normalizados por el sistema para sumar 1.0).";
+        } else if (sum === 0) { 
             adjustedDistanceWeight = 0.5;
             adjustedSafetyWeight = 0.5;
-            output.reason = "AI returned invalid zero weights, defaulted to 0.5/0.5. Original reason: " + output.reason;
+            output.reason = "La IA devolvió pesos cero inválidos, se usó 0.5/0.5 por defecto. Razón original: " + output.reason;
         }
-         // Clamp values just in case
         output.adjustedDistanceWeight = Math.max(0, Math.min(1, adjustedDistanceWeight));
-        output.adjustedSafetyWeight = Math.max(0, Math.min(1, adjustedSafetyWeight));
-        // Final ensure sum is 1 by re-deriving one from the other
         output.adjustedSafetyWeight = 1.0 - output.adjustedDistanceWeight;
 
 
