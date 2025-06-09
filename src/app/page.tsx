@@ -13,7 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { limaData } from '@/data/lima-data';
 import { dijkstra } from '@/lib/graph';
 import type { District, Connection, PathResult } from '@/types';
-import { adjustRiskWeights, type AdjustRiskWeightsInput, type AdjustRiskWeightsOutput } from '@/ai/flows/dynamic-risk-assessment';
+// AI related imports are no longer needed here if the button is removed.
+// import { adjustRiskWeights, type AdjustRiskWeightsInput, type AdjustRiskWeightsOutput } from '@/ai/flows/dynamic-risk-assessment';
+
 
 export default function HomePage() {
   const { toast } = useToast();
@@ -28,9 +30,9 @@ export default function HomePage() {
 
   const [pathResult, setPathResult] = useState<PathResult | null>(null);
   const [isCalculatingPath, setIsCalculatingPath] = useState(false);
-  const [isAdjustingWeights, setIsAdjustingWeights] = useState(false);
+  // const [isAdjustingWeights, setIsAdjustingWeights] = useState(false); // No longer needed
   
-  const [aiAdjustmentReason, setAiAdjustmentReason] = useState<string | null>(null);
+  // const [aiAdjustmentReason, setAiAdjustmentReason] = useState<string | null>(null); // No longer needed
   
   const [isSelectingOrigin, setIsSelectingOrigin] = useState(true);
 
@@ -44,7 +46,7 @@ export default function HomePage() {
     const clampedAlpha = Math.max(0, Math.min(1, parseFloat(newAlpha.toFixed(2))));
     setAlpha(clampedAlpha);
     setBeta(parseFloat((1 - clampedAlpha).toFixed(2)));
-    setAiAdjustmentReason(null); 
+    // setAiAdjustmentReason(null); // No longer needed if AI adjustment reason is removed
   };
 
   const handleCalculatePath = useCallback(async () => {
@@ -88,68 +90,7 @@ export default function HomePage() {
     }
   }, [selectedOriginId, selectedDestinationId, alpha, beta, districtsList, connectionsList, toast]);
 
-  const handleAdjustWeightsAI = async () => {
-    setIsAdjustingWeights(true);
-    setAiAdjustmentReason(null);
-    try {
-      const allDistrictNames = districtsList.map(d => d.name);
-      
-      const input: AdjustRiskWeightsInput = { 
-        distanceWeight: alpha, 
-        safetyWeight: beta,
-        allDistrictNames: allDistrictNames,
-      };
-
-      const result: AdjustRiskWeightsOutput = await adjustRiskWeights(input);
-      
-      let adjAlpha = result.adjustedDistanceWeight;
-      let adjBeta = result.adjustedSafetyWeight;
-      const sum = adjAlpha + adjBeta;
-
-      if (Math.abs(sum - 1.0) > 0.001 && sum !== 0) {
-        adjAlpha = parseFloat((adjAlpha / sum).toFixed(2));
-        adjBeta = parseFloat((1.0 - adjAlpha).toFixed(2)); 
-        toast({ title: "Pesos de IA Normalizados", description: "La salida de la IA fue normalizada por el sistema para sumar 1.", variant: "default" });
-      } else if (sum === 0 || isNaN(adjAlpha) || isNaN(adjBeta)) {
-        adjAlpha = 0.5; 
-        adjBeta = 0.5;
-        toast({ title: "Pesos de IA Corregidos", description: "La salida de la IA no era válida, se usó 0.5/0.5 por defecto.", variant: "destructive" });
-      } else {
-        adjBeta = parseFloat((1.0 - parseFloat(adjAlpha.toFixed(2))).toFixed(2));
-        adjAlpha = parseFloat(adjAlpha.toFixed(2));
-      }
-      
-      adjAlpha = Math.max(0, Math.min(1, adjAlpha));
-      adjBeta = 1.0 - adjAlpha; 
-
-      setAlpha(adjAlpha);
-      setBeta(adjBeta); 
-
-      setAiAdjustmentReason(result.reason);
-      toast({ title: "Pesos Ajustados por IA", description: `Nuevos pesos: Alfa=${adjAlpha.toFixed(2)}, Beta=${adjBeta.toFixed(2)}` });
-
-      if (selectedOriginId && selectedDestinationId) {
-        setIsCalculatingPath(true);
-        setPathResult(null);
-        await new Promise(resolve => setTimeout(resolve, 50)); 
-        const pathRecalcResult = dijkstra(districtsList, connectionsList, selectedOriginId, selectedDestinationId, adjAlpha, adjBeta);
-        if (pathRecalcResult) {
-          setPathResult(pathRecalcResult);
-          toast({ title: "Ruta Recalculada", description: "Ruta recalculada con los nuevos pesos de la IA." });
-        } else {
-          toast({ title: "Ruta No Encontrada", description: "No se pudo encontrar una ruta con los nuevos pesos de la IA.", variant: "destructive" });
-           setPathResult(null);
-        }
-        setIsCalculatingPath(false);
-      }
-
-    } catch (error) {
-      console.error("Error adjusting weights with AI:", error);
-      toast({ title: "Error de Ajuste IA", description: "Ocurrió un error al ajustar los pesos con la IA.", variant: "destructive" });
-    } finally {
-      setIsAdjustingWeights(false);
-    }
-  };
+  // handleAdjustWeightsAI function is removed as the button is removed.
 
   const handleMapDistrictClick = (districtId: string) => {
     const districtName = districtsList.find(d => d.id === districtId)?.name || 'Distrito Desconocido';
@@ -207,14 +148,12 @@ export default function HomePage() {
             beta={beta}
             onWeightChange={handleWeightChange}
             onCalculatePath={handleCalculatePath}
-            onAdjustWeightsAI={handleAdjustWeightsAI}
             isLoading={isCalculatingPath}
-            isAiLoading={isAdjustingWeights}
           />
            {pathResult && (
             <ResultsDisplay 
               pathResult={pathResult} 
-              aiAdjustmentReason={aiAdjustmentReason} 
+              // aiAdjustmentReason prop removed
             />
           )}
           {!pathResult && !isCalculatingPath && (

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import type { District } from '@/types';
-import { Route, Brain, TrendingUp, ShieldAlert } from 'lucide-react';
+import { Route, TrendingUp, ShieldAlert } from 'lucide-react';
 
 interface ControlsPanelProps {
   districts: District[];
@@ -20,9 +20,7 @@ interface ControlsPanelProps {
   beta: number;
   onWeightChange: (newAlpha: number) => void;
   onCalculatePath: () => void;
-  onAdjustWeightsAI: () => void;
   isLoading: boolean;
-  isAiLoading: boolean;
 }
 
 const ControlsPanel: React.FC<ControlsPanelProps> = ({
@@ -35,9 +33,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   beta,
   onWeightChange,
   onCalculatePath,
-  onAdjustWeightsAI,
   isLoading,
-  isAiLoading,
 }) => {
   const handleSliderChange = (value: number[]) => {
     onWeightChange(value[0]);
@@ -121,15 +117,6 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
           className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           {isLoading ? 'Calculando...' : 'Calcular Ruta'}
-        </Button>
-        <Button 
-          onClick={onAdjustWeightsAI} 
-          disabled={isAiLoading} 
-          variant="outline" 
-          className="w-full border-accent text-accent hover:bg-accent/10 hover:text-accent"
-        >
-          <Brain className="mr-2 h-4 w-4" />
-          {isAiLoading ? 'IA Ajustando...' : 'Ajustar Pesos con IA'}
         </Button>
       </CardFooter>
     </Card>

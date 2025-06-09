@@ -1,3 +1,4 @@
+
 // This file can be used for custom SVG icons or re-exporting lucide-react icons
 // For now, we'll mostly rely on lucide-react directly in components.
 
@@ -22,4 +23,5 @@ export const MyCustomIcon = (props: React.SVGProps<SVGSVGElement>) => (
 */
 
 // Re-exporting commonly used icons from lucide-react can also be done here for consistency
-export { MapPin, Route, AlertTriangle, Brain, SlidersHorizontal, Sigma, MapPinned } from 'lucide-react';
+// Brain icon removed as it's no longer used.
+export { MapPin, Route, AlertTriangle, SlidersHorizontal, Sigma, MapPinned } from 'lucide-react';
