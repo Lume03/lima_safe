@@ -6,7 +6,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { APIProvider, Map, Marker, InfoWindow } from '@vis.gl/react-google-maps';
 import type { District, PathSegment } from '@/types';
-import { getDangerColor } from '@/lib/graph';
+import { getDangerColor, getDangerStrokeWeight } from '@/lib/graph'; // Import getDangerStrokeWeight
 import { MapPin } from 'lucide-react';
 
 // Dynamically import Polyline with a fallback
@@ -110,8 +110,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
               { lat: segment.to.lat, lng: segment.to.lng },
             ]}
             strokeColor={getDangerColor(segment.danger)}
-            strokeOpacity={0.8}
-            strokeWeight={6}
+            strokeOpacity={0.9} // Slightly increased opacity for better visibility
+            strokeWeight={getDangerStrokeWeight(segment.danger)} // Dynamic stroke weight
           />
         ))}
 

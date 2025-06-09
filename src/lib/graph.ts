@@ -145,3 +145,14 @@ export function getDangerColor(dangerLevel: number): string {
     default: return '#9E9E9E'; // Grey for unknown
   }
 }
+
+export function getDangerStrokeWeight(dangerLevel: number): number {
+  switch (dangerLevel) {
+    case 1: return 4; // Safest, thinnest
+    case 2: return 5;
+    case 3: return 6; // Medium
+    case 4: return 7;
+    case 5: return 8; // Most dangerous, thickest
+    default: return 6; // Default for unknown or levels outside 1-5
+  }
+}
