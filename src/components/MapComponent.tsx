@@ -45,6 +45,26 @@ const MapComponent: React.FC<MapComponentProps> = ({
     );
   }
 
+  const getMarkerIcon = (district: District) => {
+    if (
+      typeof window !== 'undefined' &&
+      window.google &&
+      window.google.maps &&
+      window.google.maps.SymbolPath &&
+      typeof window.google.maps.SymbolPath.CIRCLE !== 'undefined'
+    ) {
+      return {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        fillColor: selectedOrigin?.id === district.id ? '#FF9800' : (selectedDestination?.id === district.id ? '#3F51B5' : '#777777'),
+        fillOpacity: 1,
+        strokeWeight: 2,
+        strokeColor: '#FFFFFF'
+      };
+    }
+    return undefined; // Fallback to default marker
+  };
+
   return (
     <APIProvider apiKey={apiKey}>
       <Map
@@ -61,14 +81,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
             position={{ lat: district.lat, lng: district.lng }}
             onClick={() => onDistrictClick(district.id)}
             title={district.name}
-            icon={{
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 8,
-              fillColor: selectedOrigin?.id === district.id ? '#FF9800' : (selectedDestination?.id === district.id ? '#3F51B5' : '#777777'),
-              fillOpacity: 1,
-              strokeWeight: 2,
-              strokeColor: '#FFFFFF'
-            }}
+            icon={getMarkerIcon(district)}
           />
         ))}
 
