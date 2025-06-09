@@ -5,23 +5,20 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { APIProvider, Map, Marker, InfoWindow } from '@vis.gl/react-google-maps';
-import type { District, PathSegment, PolylineProps as VisGlPolylineProps } from '@/types'; // Assuming PolylineProps might be in types or directly from lib
+import type { District, PathSegment } from '@/types'; 
 import { getDangerColor, getDangerStrokeWeight } from '@/lib/graph';
 import { MapPin } from 'lucide-react';
 
-// Define a local PolylineProps type if not available or to ensure consistency
-// For @vis.gl/react-google-maps, PolylineProps are typically part of its exports.
-// If not, we'd define it based on expected props like path, strokeColor, etc.
-// We'll try to import it or define a compatible one.
-// For now, let's assume a basic structure if VisGlPolylineProps is not defined in @/types
-type PolylineProps = VisGlPolylineProps extends undefined ? React.PropsWithChildren<{
+// Simplified local PolylineProps type definition
+type PolylineProps = {
     path?: google.maps.LatLngLiteral[];
     strokeColor?: string;
     strokeOpacity?: number;
     strokeWeight?: number;
-    [key: string]: any; // Allow other props
-}> : VisGlPolylineProps;
-
+    children?: React.ReactNode;
+    key?: React.Key; // Ensure key is allowed
+    [key: string]: any; // Allow other props that the underlying component might accept
+};
 
 const Polyline = dynamic<PolylineProps>(
   () =>
@@ -43,13 +40,19 @@ const Polyline = dynamic<PolylineProps>(
         console.error(
           `[MapComponent] Polyline component NOT loaded. Reason: 'Polyline' not found as a function in @vis.gl/react-google-maps module. ${availableKeysMessage}. Path lines will NOT be rendered.`
         );
-        const FallbackPolyline: React.FC<PolylineProps> = (_props) => null;
-        return FallbackPolyline;
+        const FallbackPolyline: React.FC<PolylineProps> = (_props) => {
+            console.warn('[MapComponent] FallbackPolyline rendered because Polyline could not be loaded. Path data:', _props.path);
+            return null; 
+        };
+        return FallbackPolyline; 
       })
       .catch(error => {
         console.error('[MapComponent] CRITICAL ERROR during dynamic import of @vis.gl/react-google-maps for Polyline:', error, '. Path lines will NOT be rendered.');
-        const ErrorFallbackPolyline: React.FC<PolylineProps> = (_props) => null;
-        return ErrorFallbackPolyline;
+        const ErrorFallbackPolyline: React.FC<PolylineProps> = (_props) => {
+            console.warn('[MapComponent] ErrorFallbackPolyline rendered due to import error. Path data:', _props.path);
+            return null; 
+        };
+        return ErrorFallbackPolyline; 
       }),
   { 
     ssr: false,
@@ -82,7 +85,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   React.useEffect(() => {
-    // Log the received pathSegments to help debug if data is missing
     console.log('[MapComponent] pathSegments received:', JSON.stringify(pathSegments, null, 2));
   }, [pathSegments]);
 
@@ -137,24 +139,30 @@ const MapComponent: React.FC<MapComponentProps> = ({
         ))}
 
         {pathSegments && pathSegments.length > 0 && Polyline ? (
-          pathSegments.map((segment, index) => (
-            <Polyline // Using the dynamically imported component
-              key={`path-segment-${index}`}
-              path={[
-                { lat: segment.from.lat, lng: segment.from.lng },
-                { lat: segment.to.lat, lng: segment.to.lng },
-              ]}
-              strokeColor={getDangerColor(segment.danger)}
-              strokeOpacity={0.9}
-              strokeWeight={getDangerStrokeWeight(segment.danger)}
-            />
-          ))
+          pathSegments.map((segment, index) => {
+            // Check if Polyline is a valid component before rendering
+            if (typeof Polyline !== 'function' && typeof Polyline !== 'object') { // object for React.forwardRef components
+              console.error("[MapComponent] Polyline is not a function or valid component, cannot render path segment.");
+              return null;
+            }
+            return (
+              <Polyline 
+                key={`path-segment-${index}`}
+                path={[
+                  { lat: segment.from.lat, lng: segment.from.lng },
+                  { lat: segment.to.lat, lng: segment.to.lng },
+                ]}
+                strokeColor={getDangerColor(segment.danger)}
+                strokeOpacity={0.9}
+                strokeWeight={getDangerStrokeWeight(segment.danger)}
+              />
+            );
+          })
         ): (
           pathSegments && pathSegments.length > 0 && (
-            // This will log if pathSegments exist but Polyline component didn't load properly (resolved to a fallback that might be null or similar)
-            // Note: FallbackPolyline is designed to return null, so this might not render anything specific,
-            // but the console error from dynamic import is the key.
-            <></> 
+            // This case means Polyline component itself is falsy (e.g., resolved to null from fallback)
+            // The fallback components (FallbackPolyline, ErrorFallbackPolyline) already log messages.
+             <></> 
           )
         )}
 

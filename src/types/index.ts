@@ -35,8 +35,7 @@ export interface LimaData {
   connections: Connection[];
 }
 
-// Attempt to define or re-export PolylineProps if provided by @vis.gl/react-google-maps
-// This is a common pattern. If the library doesn't export it directly,
-// we might need to define it based on the props the Polyline component accepts.
-// For now, we'll make it flexible.
-export type { PolylineProps as VisGlPolylineProps } from '@vis.gl/react-google-maps';
+// Removed VisGlPolylineProps re-export as MapComponent now uses a local simplified type.
+// If other components were using VisGlPolylineProps from here, this might need to be preserved,
+// but for now, MapComponent is the primary consumer of Polyline-related types.
+// export type { PolylineProps as VisGlPolylineProps } from '@vis.gl/react-google-maps';
