@@ -1,3 +1,4 @@
+
 export interface District {
   id: string;
   name: string;
@@ -6,7 +7,7 @@ export interface District {
 }
 
 export interface Connection {
-  id: string;
+  id:string;
   from: string;
   to: string;
   distance: number; // in kilometers
@@ -33,3 +34,9 @@ export interface LimaData {
   districts: District[];
   connections: Connection[];
 }
+
+// Attempt to define or re-export PolylineProps if provided by @vis.gl/react-google-maps
+// This is a common pattern. If the library doesn't export it directly,
+// we might need to define it based on the props the Polyline component accepts.
+// For now, we'll make it flexible.
+export type { PolylineProps as VisGlPolylineProps } from '@vis.gl/react-google-maps';

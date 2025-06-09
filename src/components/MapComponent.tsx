@@ -5,36 +5,58 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { APIProvider, Map, Marker, InfoWindow } from '@vis.gl/react-google-maps';
-import type { District, PathSegment } from '@/types';
-import { getDangerColor, getDangerStrokeWeight } from '@/lib/graph'; // Import getDangerStrokeWeight
+import type { District, PathSegment, PolylineProps as VisGlPolylineProps } from '@/types'; // Assuming PolylineProps might be in types or directly from lib
+import { getDangerColor, getDangerStrokeWeight } from '@/lib/graph';
 import { MapPin } from 'lucide-react';
 
-// Dynamically import Polyline with robust error handling and fallback
-const Polyline = dynamic(
-  () => {
-    return import('@vis.gl/react-google-maps').then((mod) => {
-      if (mod && typeof mod.Polyline === 'function') {
-        return mod.Polyline; // Return the component if found and is a function
-      }
-      // Log details if Polyline is not found or not a function
-      console.error(
-        'Polyline component not found in @vis.gl/react-google-maps module or it is not a function. Polylines will not be rendered. Available module keys:',
-        Object.keys(mod || {})
-      );
-      // Return a fallback component that renders nothing
-      const FallbackPolyline: React.FC = () => null;
-      return FallbackPolyline;
-    }).catch(error => {
-      console.error('Error during dynamic import of @vis.gl/react-google-maps for Polyline:', error);
-      // Return a fallback component in case of import error
-      const ErrorFallbackPolyline: React.FC = () => null;
-      return ErrorFallbackPolyline;
-    });
-  },
-  {
+// Define a local PolylineProps type if not available or to ensure consistency
+// For @vis.gl/react-google-maps, PolylineProps are typically part of its exports.
+// If not, we'd define it based on expected props like path, strokeColor, etc.
+// We'll try to import it or define a compatible one.
+// For now, let's assume a basic structure if VisGlPolylineProps is not defined in @/types
+type PolylineProps = VisGlPolylineProps extends undefined ? React.PropsWithChildren<{
+    path?: google.maps.LatLngLiteral[];
+    strokeColor?: string;
+    strokeOpacity?: number;
+    strokeWeight?: number;
+    [key: string]: any; // Allow other props
+}> : VisGlPolylineProps;
+
+
+const Polyline = dynamic<PolylineProps>(
+  () =>
+    import('@vis.gl/react-google-maps')
+      .then(mod => {
+        if (mod && typeof mod.Polyline === 'function') {
+          console.log('[MapComponent] Polyline component successfully loaded dynamically.');
+          return mod.Polyline as React.ComponentType<PolylineProps>;
+        }
+        
+        let availableKeysMessage = 'module object was not available or was empty.';
+        if (mod && typeof mod === 'object' && mod !== null) {
+          try {
+            availableKeysMessage = `Available module keys: ${Object.keys(mod).join(', ')}`;
+          } catch (e) {
+            availableKeysMessage = 'Error getting keys from module object.';
+          }
+        }
+        console.error(
+          `[MapComponent] Polyline component NOT loaded. Reason: 'Polyline' not found as a function in @vis.gl/react-google-maps module. ${availableKeysMessage}. Path lines will NOT be rendered.`
+        );
+        const FallbackPolyline: React.FC<PolylineProps> = (_props) => null;
+        return FallbackPolyline;
+      })
+      .catch(error => {
+        console.error('[MapComponent] CRITICAL ERROR during dynamic import of @vis.gl/react-google-maps for Polyline:', error, '. Path lines will NOT be rendered.');
+        const ErrorFallbackPolyline: React.FC<PolylineProps> = (_props) => null;
+        return ErrorFallbackPolyline;
+      }),
+  { 
     ssr: false,
-    // You could add a loading component here if needed:
-    // loading: () => <p>Loading path...</p>,
+    loading: () => {
+      // console.log('[MapComponent] Polyline component is loading...'); 
+      return null; 
+    }
   }
 );
 
@@ -58,6 +80,11 @@ const MapComponent: React.FC<MapComponentProps> = ({
   zoom = 11,
 }) => {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+  React.useEffect(() => {
+    // Log the received pathSegments to help debug if data is missing
+    console.log('[MapComponent] pathSegments received:', JSON.stringify(pathSegments, null, 2));
+  }, [pathSegments]);
 
   if (!apiKey) {
     return (
@@ -109,18 +136,27 @@ const MapComponent: React.FC<MapComponentProps> = ({
           />
         ))}
 
-        {pathSegments.map((segment, index) => (
-          <Polyline
-            key={`path-segment-${index}`}
-            path={[
-              { lat: segment.from.lat, lng: segment.from.lng },
-              { lat: segment.to.lat, lng: segment.to.lng },
-            ]}
-            strokeColor={getDangerColor(segment.danger)}
-            strokeOpacity={0.9} // Slightly increased opacity for better visibility
-            strokeWeight={getDangerStrokeWeight(segment.danger)} // Dynamic stroke weight
-          />
-        ))}
+        {pathSegments && pathSegments.length > 0 && Polyline ? (
+          pathSegments.map((segment, index) => (
+            <Polyline // Using the dynamically imported component
+              key={`path-segment-${index}`}
+              path={[
+                { lat: segment.from.lat, lng: segment.from.lng },
+                { lat: segment.to.lat, lng: segment.to.lng },
+              ]}
+              strokeColor={getDangerColor(segment.danger)}
+              strokeOpacity={0.9}
+              strokeWeight={getDangerStrokeWeight(segment.danger)}
+            />
+          ))
+        ): (
+          pathSegments && pathSegments.length > 0 && (
+            // This will log if pathSegments exist but Polyline component didn't load properly (resolved to a fallback that might be null or similar)
+            // Note: FallbackPolyline is designed to return null, so this might not render anything specific,
+            // but the console error from dynamic import is the key.
+            <></> 
+          )
+        )}
 
         {selectedOrigin && (
           <InfoWindow position={{ lat: selectedOrigin.lat, lng: selectedOrigin.lng }}>
