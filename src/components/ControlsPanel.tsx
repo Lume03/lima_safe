@@ -40,13 +40,26 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   isLoading,
   isAiLoading,
 }) => {
+  const handleAlphaInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = parseFloat(e.target.value);
+    if (isNaN(value)) value = 0; // Handle empty input or invalid number
+    onAlphaChange(value);
+  };
+
+  const handleBetaInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = parseFloat(e.target.value);
+    if (isNaN(value)) value = 0; // Handle empty input or invalid number
+    onBetaChange(value);
+  };
+
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline text-2xl text-primary flex items-center">
           <Route className="mr-2 h-6 w-6" /> Route Planner
         </CardTitle>
-        <CardDescription>Select origin, destination, and adjust weights for path calculation.</CardDescription>
+        <CardDescription>Select origin, destination, and adjust weights for path calculation. Alpha + Beta must equal 1.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
@@ -87,14 +100,14 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
           <Input
             id="alpha-input"
             type="number"
-            value={alpha}
-            onChange={(e) => onAlphaChange(parseFloat(e.target.value))}
-            step="0.1"
+            value={alpha.toFixed(2)} // Display with 2 decimal places
+            onChange={handleAlphaInputChange}
+            step="0.01" // Allow finer control
             min="0"
             max="1"
             className="font-code"
           />
-           <p className="text-xs text-muted-foreground">Importance of distance (0 to 1).</p>
+           <p className="text-xs text-muted-foreground">Importance of distance (0 to 1). Modifying this will adjust Beta.</p>
         </div>
 
         <div className="space-y-2">
@@ -103,14 +116,14 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
           <Input
             id="beta-input"
             type="number"
-            value={beta}
-            onChange={(e) => onBetaChange(parseFloat(e.target.value))}
-            step="0.1"
+            value={beta.toFixed(2)} // Display with 2 decimal places
+            onChange={handleBetaInputChange}
+            step="0.01" // Allow finer control
             min="0"
             max="1"
             className="font-code"
           />
-          <p className="text-xs text-muted-foreground">Importance of safety (0 to 1).</p>
+          <p className="text-xs text-muted-foreground">Importance of safety (0 to 1). Modifying this will adjust Alpha.</p>
         </div>
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row gap-2">

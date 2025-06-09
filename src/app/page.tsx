@@ -21,8 +21,11 @@ export default function HomePage() {
 
   const [selectedOriginId, setSelectedOriginId] = useState<string | null>(null);
   const [selectedDestinationId, setSelectedDestinationId] = useState<string | null>(null);
-  const [alpha, setAlpha] = useState(0.7); // Distance weight
-  const [beta, setBeta] = useState(0.3);   // Safety weight
+  
+  // Alpha (distance weight) and Beta (safety weight) must sum to 1.
+  // Default to a balance favoring distance slightly.
+  const [alpha, setAlpha] = useState(0.7); 
+  const [beta, setBeta] = useState(0.3);   
 
   const [pathResult, setPathResult] = useState<PathResult | null>(null);
   const [isCalculatingPath, setIsCalculatingPath] = useState(false);
@@ -30,17 +33,25 @@ export default function HomePage() {
   
   const [aiAdjustmentReason, setAiAdjustmentReason] = useState<string | null>(null);
   
-  // State for map district selection logic
-  const [isSelectingOrigin, setIsSelectingOrigin] = useState(true); // True for origin, false for destination
+  const [isSelectingOrigin, setIsSelectingOrigin] = useState(true);
 
 
   useEffect(() => {
     setDistrictsList(limaData.districts);
     setConnectionsList(limaData.connections);
-    // Set default origin and destination for initial display if desired
-    // setSelectedOriginId(limaData.districts[0]?.id || null);
-    // setSelectedDestinationId(limaData.districts[1]?.id || null);
   }, []);
+
+  const handleAlphaChange = (newAlpha: number) => {
+    const clampedAlpha = Math.max(0, Math.min(1, parseFloat(newAlpha.toFixed(2))));
+    setAlpha(clampedAlpha);
+    setBeta(parseFloat((1 - clampedAlpha).toFixed(2)));
+  };
+
+  const handleBetaChange = (newBeta: number) => {
+    const clampedBeta = Math.max(0, Math.min(1, parseFloat(newBeta.toFixed(2))));
+    setBeta(clampedBeta);
+    setAlpha(parseFloat((1 - clampedBeta).toFixed(2)));
+  };
 
   const handleCalculatePath = useCallback(async () => {
     if (!selectedOriginId || !selectedDestinationId) {
@@ -63,9 +74,8 @@ export default function HomePage() {
     }
 
     setIsCalculatingPath(true);
-    setPathResult(null); // Clear previous results
+    setPathResult(null); 
     try {
-      // Simulate a short delay for better UX
       await new Promise(resolve => setTimeout(resolve, 500));
       const result = dijkstra(districtsList, connectionsList, selectedOriginId, selectedDestinationId, alpha, beta);
       if (result) {
@@ -86,18 +96,57 @@ export default function HomePage() {
     setIsAdjustingWeights(true);
     setAiAdjustmentReason(null);
     try {
-      const input: AdjustRiskWeightsInput = { distanceWeight: alpha, safetyWeight: beta };
+      const allDistrictNames = districtsList.map(d => d.name);
+      const input: AdjustRiskWeightsInput = { 
+        distanceWeight: alpha, 
+        safetyWeight: beta,
+        allDistrictNames: allDistrictNames,
+      };
       const result: AdjustRiskWeightsOutput = await adjustRiskWeights(input);
-      setAlpha(result.adjustedDistanceWeight);
-      setBeta(result.adjustedSafetyWeight);
-      setAiAdjustmentReason(result.reason);
-      toast({ title: "Weights Adjusted by AI", description: `New weights: Alpha=${result.adjustedDistanceWeight.toFixed(2)}, Beta=${result.adjustedSafetyWeight.toFixed(2)}` });
-      // Optionally, recalculate path with new weights if origin/destination are set
-      if (selectedOriginId && selectedDestinationId) {
-        // This needs to use the *new* alpha and beta values that were just set.
-        // The state update for alpha/beta might not be immediate, so pass them directly or use a useEffect.
-        // For simplicity, we'll let the user re-click "Calculate Path" or trigger it in a useEffect if robust auto-recalc is needed.
+      
+      // Ensure AI output sums to 1, normalize if necessary
+      let adjAlpha = result.adjustedDistanceWeight;
+      let adjBeta = result.adjustedSafetyWeight;
+      const sum = adjAlpha + adjBeta;
+
+      if (sum !== 0 && Math.abs(sum - 1.0) > 0.001) { // Check if sum is not 1 (with tolerance)
+        adjAlpha = parseFloat((adjAlpha / sum).toFixed(2));
+        adjBeta = parseFloat((adjBeta / sum).toFixed(2));
+         // Ensure strict sum to 1 by assigning the remainder to beta after alpha is set
+        adjBeta = parseFloat((1 - adjAlpha).toFixed(2));
+        toast({ title: "AI Weights Normalized", description: "AI output was normalized to sum to 1.", variant: "default" });
+      } else if (sum === 0) { // Avoid division by zero, default to 0.5/0.5
+        adjAlpha = 0.5;
+        adjBeta = 0.5;
+        toast({ title: "AI Weights Corrected", description: "AI output was invalid, defaulted to 0.5/0.5.", variant: "destructive" });
       }
+
+
+      setAlpha(Math.max(0, Math.min(1, adjAlpha)));
+      // Beta is derived from alpha to ensure sum is 1
+      setBeta(Math.max(0, Math.min(1, 1 - adjAlpha))); 
+
+      setAiAdjustmentReason(result.reason);
+      toast({ title: "Weights Adjusted by AI", description: `New weights: Alpha=${alpha.toFixed(2)}, Beta=${beta.toFixed(2)}` });
+
+      if (selectedOriginId && selectedDestinationId) {
+         // Recalculate path with new weights immediately
+        const recalcAlpha = Math.max(0, Math.min(1, adjAlpha));
+        const recalcBeta = Math.max(0, Math.min(1, 1 - recalcAlpha));
+        
+        setIsCalculatingPath(true);
+        setPathResult(null);
+        await new Promise(resolve => setTimeout(resolve, 100)); // short delay for state update
+        const pathRecalcResult = dijkstra(districtsList, connectionsList, selectedOriginId, selectedDestinationId, recalcAlpha, recalcBeta);
+        if (pathRecalcResult) {
+          setPathResult(pathRecalcResult);
+          toast({ title: "Route Recalculated", description: "Path recalculated with new AI weights." });
+        } else {
+          toast({ title: "No Path Found", description: "Could not find a path with new AI weights.", variant: "destructive" });
+        }
+        setIsCalculatingPath(false);
+      }
+
     } catch (error) {
       console.error("Error adjusting weights with AI:", error);
       toast({ title: "AI Adjustment Error", description: "An error occurred while adjusting weights.", variant: "destructive" });
@@ -110,7 +159,7 @@ export default function HomePage() {
     if (isSelectingOrigin) {
       setSelectedOriginId(districtId);
       toast({ title: "Origin Selected", description: `${districtsList.find(d=>d.id === districtId)?.name} set as origin.`});
-      if (districtId === selectedDestinationId) setSelectedDestinationId(null); // Clear destination if same as new origin
+      if (districtId === selectedDestinationId) setSelectedDestinationId(null); 
     } else {
       if (districtId === selectedOriginId) {
         toast({ title: "Invalid Selection", description: "Destination cannot be the same as origin.", variant: "destructive"});
@@ -119,7 +168,7 @@ export default function HomePage() {
       setSelectedDestinationId(districtId);
       toast({ title: "Destination Selected", description: `${districtsList.find(d=>d.id === districtId)?.name} set as destination.`});
     }
-    setIsSelectingOrigin(!isSelectingOrigin); // Toggle selection mode
+    setIsSelectingOrigin(!isSelectingOrigin); 
   };
   
   const selectedOriginDistrict = districtsList.find(d => d.id === selectedOriginId) || null;
@@ -144,10 +193,8 @@ export default function HomePage() {
             destination={selectedDestinationId}
             alpha={alpha}
             beta={beta}
-            onOriginChange={setSelectedOriginId}
-            onDestinationChange={setSelectedDestinationId}
-            onAlphaChange={setAlpha}
-            onBetaChange={setBeta}
+            onAlphaChange={handleAlphaChange}
+            onBetaChange={handleBetaChange}
             onCalculatePath={handleCalculatePath}
             onAdjustWeightsAI={handleAdjustWeightsAI}
             isLoading={isCalculatingPath}
