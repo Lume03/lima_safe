@@ -3,65 +3,75 @@
 'use client';
 
 import React from 'react';
-import dynamic from 'next/dynamic';
-import { APIProvider, Map, Marker, InfoWindow } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, Marker, InfoWindow, useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
 import type { District, PathSegment } from '@/types'; 
 import { getDangerColor, getDangerStrokeWeight } from '@/lib/graph';
+// MapPin might not be actively used by getMarkerIcon but kept for potential future use or consistency.
 import { MapPin } from 'lucide-react';
 
-// Simplified local PolylineProps type definition
-type PolylineProps = {
-    path?: google.maps.LatLngLiteral[];
-    strokeColor?: string;
-    strokeOpacity?: number;
-    strokeWeight?: number;
-    children?: React.ReactNode;
-    key?: React.Key; // Ensure key is allowed
-    [key: string]: any; // Allow other props that the underlying component might accept
+// New component to handle Polyline rendering directly using google.maps.Polyline
+const PathRenderer: React.FC<{ pathSegments: PathSegment[] }> = ({ pathSegments }) => {
+  const map = useMap(); // Hook to get the map instance
+  // useMapsLibrary hook to load additional Google Maps libraries.
+  // The @vis.gl/react-google-maps Polyline component docs state it needs the 'routes' library.
+  // This ensures that google.maps.Polyline is available and ready.
+  const routesLibrary = useMapsLibrary('routes');
+  const drawnPolylinesRef = React.useRef<google.maps.Polyline[]>([]);
+
+  React.useEffect(() => {
+    if (!map) {
+      // console.log('[PathRenderer] Map instance not available yet.');
+      return;
+    }
+    if (!routesLibrary) {
+      // console.log('[PathRenderer] Routes library not loaded yet.');
+      // This check also implies google.maps might not be fully ready.
+      return;
+    }
+    // Defensive check for google.maps.Polyline constructor
+    if (typeof google === 'undefined' || !google.maps || !google.maps.Polyline) {
+      console.error('[PathRenderer] google.maps.Polyline constructor is not available. Path lines cannot be drawn.');
+      return;
+    }
+
+    // Clear previously drawn polylines from the map and the ref
+    drawnPolylinesRef.current.forEach(polyline => polyline.setMap(null));
+    drawnPolylinesRef.current = [];
+
+    if (pathSegments && pathSegments.length > 0) {
+      // console.log('[PathRenderer] Drawing path segments:', pathSegments.length);
+      pathSegments.forEach((segment) => {
+        try {
+          const polylineInstance = new google.maps.Polyline({
+            path: [
+              { lat: segment.from.lat, lng: segment.from.lng },
+              { lat: segment.to.lat, lng: segment.to.lng },
+            ],
+            strokeColor: getDangerColor(segment.danger),
+            strokeOpacity: 0.9,
+            strokeWeight: getDangerStrokeWeight(segment.danger),
+            map: map, // Associate this polyline with the map instance
+          });
+          drawnPolylinesRef.current.push(polylineInstance);
+        } catch (error) {
+          console.error('[PathRenderer] Error creating Polyline for segment:', segment, error);
+        }
+      });
+    } else {
+      // console.log('[PathRenderer] No path segments to draw.');
+    }
+
+    // Cleanup function: remove polylines when component unmounts or dependencies change
+    return () => {
+      // console.log('[PathRenderer] Cleanup: removing polylines.');
+      drawnPolylinesRef.current.forEach(polyline => polyline.setMap(null));
+      drawnPolylinesRef.current = [];
+    };
+  }, [map, routesLibrary, pathSegments]); // Effect dependencies
+
+  return null; // This component only interacts with the map, doesn't render DOM elements
 };
 
-const Polyline = dynamic<PolylineProps>(
-  () =>
-    import('@vis.gl/react-google-maps')
-      .then(mod => {
-        if (mod && typeof mod.Polyline === 'function') {
-          console.log('[MapComponent] Polyline component successfully loaded dynamically.');
-          return mod.Polyline as React.ComponentType<PolylineProps>;
-        }
-        
-        let availableKeysMessage = 'module object was not available or was empty.';
-        if (mod && typeof mod === 'object' && mod !== null) {
-          try {
-            availableKeysMessage = `Available module keys: ${Object.keys(mod).join(', ')}`;
-          } catch (e) {
-            availableKeysMessage = 'Error getting keys from module object.';
-          }
-        }
-        console.error(
-          `[MapComponent] Polyline component NOT loaded. Reason: 'Polyline' not found as a function in @vis.gl/react-google-maps module. ${availableKeysMessage}. Path lines will NOT be rendered.`
-        );
-        const FallbackPolyline: React.FC<PolylineProps> = (_props) => {
-            console.warn('[MapComponent] FallbackPolyline rendered because Polyline could not be loaded. Path data:', _props.path);
-            return null; 
-        };
-        return FallbackPolyline; 
-      })
-      .catch(error => {
-        console.error('[MapComponent] CRITICAL ERROR during dynamic import of @vis.gl/react-google-maps for Polyline:', error, '. Path lines will NOT be rendered.');
-        const ErrorFallbackPolyline: React.FC<PolylineProps> = (_props) => {
-            console.warn('[MapComponent] ErrorFallbackPolyline rendered due to import error. Path data:', _props.path);
-            return null; 
-        };
-        return ErrorFallbackPolyline; 
-      }),
-  { 
-    ssr: false,
-    loading: () => {
-      // console.log('[MapComponent] Polyline component is loading...'); 
-      return null; 
-    }
-  }
-);
 
 interface MapComponentProps {
   districts: District[];
@@ -85,7 +95,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   React.useEffect(() => {
-    console.log('[MapComponent] pathSegments received:', JSON.stringify(pathSegments, null, 2));
+    // console.log('[MapComponent] pathSegments received:', JSON.stringify(pathSegments, null, 2));
   }, [pathSegments]);
 
   if (!apiKey) {
@@ -138,33 +148,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
           />
         ))}
 
-        {pathSegments && pathSegments.length > 0 && Polyline ? (
-          pathSegments.map((segment, index) => {
-            // Check if Polyline is a valid component before rendering
-            if (typeof Polyline !== 'function' && typeof Polyline !== 'object') { // object for React.forwardRef components
-              console.error("[MapComponent] Polyline is not a function or valid component, cannot render path segment.");
-              return null;
-            }
-            return (
-              <Polyline 
-                key={`path-segment-${index}`}
-                path={[
-                  { lat: segment.from.lat, lng: segment.from.lng },
-                  { lat: segment.to.lat, lng: segment.to.lng },
-                ]}
-                strokeColor={getDangerColor(segment.danger)}
-                strokeOpacity={0.9}
-                strokeWeight={getDangerStrokeWeight(segment.danger)}
-              />
-            );
-          })
-        ): (
-          pathSegments && pathSegments.length > 0 && (
-            // This case means Polyline component itself is falsy (e.g., resolved to null from fallback)
-            // The fallback components (FallbackPolyline, ErrorFallbackPolyline) already log messages.
-             <></> 
-          )
-        )}
+        {/* Use the new PathRenderer component to draw polylines */}
+        <PathRenderer pathSegments={pathSegments} />
 
         {selectedOrigin && (
           <InfoWindow position={{ lat: selectedOrigin.lat, lng: selectedOrigin.lng }}>
