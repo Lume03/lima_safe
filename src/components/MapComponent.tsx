@@ -9,26 +9,33 @@ import type { District, PathSegment } from '@/types';
 import { getDangerColor, getDangerStrokeWeight } from '@/lib/graph'; // Import getDangerStrokeWeight
 import { MapPin } from 'lucide-react';
 
-// Dynamically import Polyline with a fallback
+// Dynamically import Polyline with robust error handling and fallback
 const Polyline = dynamic(
-  async () => {
-    try {
-      const mod = await import('@vis.gl/react-google-maps');
-      if (mod && (typeof mod.Polyline === 'function' || typeof mod.Polyline === 'object')) {
-        // Check if it's a function (class/functional component) or an object (e.g. from forwardRef)
-        return mod.Polyline;
+  () => {
+    return import('@vis.gl/react-google-maps').then((mod) => {
+      if (mod && typeof mod.Polyline === 'function') {
+        return mod.Polyline; // Return the component if found and is a function
       }
-      console.warn(
-        '@vis.gl/react-google-maps: Polyline component not found or invalid. Polylines will not be rendered. Module content:',
-        mod
+      // Log details if Polyline is not found or not a function
+      console.error(
+        'Polyline component not found in @vis.gl/react-google-maps module or it is not a function. Polylines will not be rendered. Available module keys:',
+        Object.keys(mod || {})
       );
-    } catch (error) {
-      console.error('Error importing Polyline from @vis.gl/react-google-maps:', error);
-    }
-    // Return a dummy component that renders nothing if Polyline is not found or fails to import
-    return () => null;
+      // Return a fallback component that renders nothing
+      const FallbackPolyline: React.FC = () => null;
+      return FallbackPolyline;
+    }).catch(error => {
+      console.error('Error during dynamic import of @vis.gl/react-google-maps for Polyline:', error);
+      // Return a fallback component in case of import error
+      const ErrorFallbackPolyline: React.FC = () => null;
+      return ErrorFallbackPolyline;
+    });
   },
-  { ssr: false }
+  {
+    ssr: false,
+    // You could add a loading component here if needed:
+    // loading: () => <p>Loading path...</p>,
+  }
 );
 
 interface MapComponentProps {
