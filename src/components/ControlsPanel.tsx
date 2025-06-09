@@ -5,20 +5,19 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider'; // Import Slider
 import type { District } from '@/types';
-import { Route,SlidersHorizontal, Brain } from 'lucide-react';
+import { Route, Brain, TrendingUp, ShieldAlert } from 'lucide-react';
 
 interface ControlsPanelProps {
   districts: District[];
   origin: string | null;
   destination: string | null;
-  alpha: number;
-  beta: number;
   onOriginChange: (value: string) => void;
   onDestinationChange: (value: string) => void;
-  onAlphaChange: (value: number) => void;
-  onBetaChange: (value: number) => void;
+  alpha: number;
+  beta: number;
+  onWeightChange: (newAlpha: number) => void;
   onCalculatePath: () => void;
   onAdjustWeightsAI: () => void;
   isLoading: boolean;
@@ -29,29 +28,19 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   districts,
   origin,
   destination,
-  alpha,
-  beta,
   onOriginChange,
   onDestinationChange,
-  onAlphaChange,
-  onBetaChange,
+  alpha,
+  beta,
+  onWeightChange,
   onCalculatePath,
   onAdjustWeightsAI,
   isLoading,
   isAiLoading,
 }) => {
-  const handleAlphaInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = parseFloat(e.target.value);
-    if (isNaN(value)) value = 0; // Handle empty input or invalid number
-    onAlphaChange(value);
+  const handleSliderChange = (value: number[]) => {
+    onWeightChange(value[0]);
   };
-
-  const handleBetaInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = parseFloat(e.target.value);
-    if (isNaN(value)) value = 0; // Handle empty input or invalid number
-    onBetaChange(value);
-  };
-
 
   return (
     <Card className="shadow-lg">
@@ -59,7 +48,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
         <CardTitle className="font-headline text-2xl text-primary flex items-center">
           <Route className="mr-2 h-6 w-6" /> Route Planner
         </CardTitle>
-        <CardDescription>Select origin, destination, and adjust weights for path calculation. Alpha + Beta must equal 1.</CardDescription>
+        <CardDescription>Select origin, destination, and adjust path preferences.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
@@ -94,45 +83,52 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="alpha-input" className="flex items-center">
-            <SlidersHorizontal className="mr-2 h-4 w-4 text-muted-foreground" /> Distance Weight (Alpha)</Label>
-          <Input
-            id="alpha-input"
-            type="number"
-            value={alpha.toFixed(2)} // Display with 2 decimal places
-            onChange={handleAlphaInputChange}
-            step="0.01" // Allow finer control
-            min="0"
-            max="1"
-            className="font-code"
+        <div className="space-y-3">
+          <div className="flex justify-between items-center mb-1">
+            <Label htmlFor="weight-slider" className="text-base">Path Preference</Label>
+          </div>
+          <Slider
+            id="weight-slider"
+            value={[alpha]}
+            max={1}
+            step={0.01}
+            onValueChange={handleSliderChange}
+            className="w-full"
+            aria-label="Path preference slider"
           />
-           <p className="text-xs text-muted-foreground">Importance of distance (0 to 1). Modifying this will adjust Beta.</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="beta-input" className="flex items-center">
-            <SlidersHorizontal className="mr-2 h-4 w-4 text-muted-foreground" /> Safety Weight (Beta)</Label>
-          <Input
-            id="beta-input"
-            type="number"
-            value={beta.toFixed(2)} // Display with 2 decimal places
-            onChange={handleBetaInputChange}
-            step="0.01" // Allow finer control
-            min="0"
-            max="1"
-            className="font-code"
-          />
-          <p className="text-xs text-muted-foreground">Importance of safety (0 to 1). Modifying this will adjust Alpha.</p>
+          <div className="flex justify-between text-xs text-muted-foreground mt-1 px-1">
+            <span className="flex items-center"><TrendingUp className="mr-1 h-3 w-3 text-green-500"/> More Distance-Focused</span>
+            <span className="flex items-center">More Safety-Focused <ShieldAlert className="ml-1 h-3 w-3 text-red-500"/></span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <div className="p-2 bg-secondary/30 rounded-md text-center">
+              <p className="text-xs text-muted-foreground">Distance (Alpha)</p>
+              <p className="font-bold font-code text-sm">{alpha.toFixed(2)}</p>
+            </div>
+            <div className="p-2 bg-secondary/30 rounded-md text-center">
+              <p className="text-xs text-muted-foreground">Safety (Beta)</p>
+              <p className="font-bold font-code text-sm">{beta.toFixed(2)}</p>
+            </div>
+          </div>
+           <p className="text-xs text-muted-foreground text-center pt-1">Adjust the slider to prioritize shorter distance vs. greater safety. Alpha + Beta = 1.</p>
         </div>
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row gap-2">
-        <Button onClick={onCalculatePath} disabled={isLoading || !origin || !destination} className="w-full bg-primary hover:bg-primary/90">
+        <Button 
+          onClick={onCalculatePath} 
+          disabled={isLoading || !origin || !destination} 
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+        >
           {isLoading ? 'Calculating...' : 'Calculate Path'}
         </Button>
-        <Button onClick={onAdjustWeightsAI} disabled={isAiLoading} variant="outline" className="w-full border-accent text-accent hover:bg-accent/10 hover:text-accent">
+        <Button 
+          onClick={onAdjustWeightsAI} 
+          disabled={isAiLoading} 
+          variant="outline" 
+          className="w-full border-accent text-accent hover:bg-accent/10 hover:text-accent"
+        >
           <Brain className="mr-2 h-4 w-4" />
-          {isAiLoading ? 'Adjusting...' : 'AI Adjust Weights'}
+          {isAiLoading ? 'AI Adjusting...' : 'AI Adjust Weights'}
         </Button>
       </CardFooter>
     </Card>

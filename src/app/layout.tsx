@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Lima Safe Route',
+  title: 'Ruta Segura en Lima',
   description: 'Find the safest and shortest routes in Lima.',
 };
 
