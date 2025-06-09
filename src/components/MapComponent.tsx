@@ -2,10 +2,17 @@
 'use client';
 
 import React from 'react';
-import { APIProvider, Map, Marker, Polyline, InfoWindow } from '@vis.gl/react-google-maps';
+import dynamic from 'next/dynamic';
+import { APIProvider, Map, Marker, InfoWindow } from '@vis.gl/react-google-maps';
 import type { District, PathSegment } from '@/types';
 import { getDangerColor } from '@/lib/graph';
 import { MapPin } from 'lucide-react';
+
+// Dynamically import Polyline
+const Polyline = dynamic(
+  () => import('@vis.gl/react-google-maps').then(mod => mod.Polyline),
+  { ssr: false }
+);
 
 interface MapComponentProps {
   districts: District[];
