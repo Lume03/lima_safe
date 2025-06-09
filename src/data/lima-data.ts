@@ -14,6 +14,10 @@ export const limaData: LimaData = {
     { id: 'magdalena_del_mar', name: 'Magdalena del Mar', lat: -12.0931, lng: -77.0728 },
     { id: 'lince', name: 'Lince', lat: -12.0858, lng: -77.0403 },
     { id: 'chorrillos', name: 'Chorrillos', lat: -12.1739, lng: -77.0178 },
+    { id: 'sjl', name: 'San Juan de Lurigancho', lat: -12.0000, lng: -76.9500 },
+    { id: 'independencia', name: 'Independencia', lat: -11.9915, lng: -77.0430 },
+    { id: 'los_olivos', name: 'Los Olivos', lat: -11.9810, lng: -77.0700 },
+    { id: 'callao', name: 'Callao', lat: -12.0560, lng: -77.1180 },
   ],
   connections: [
     // Connections from Lima Centro
@@ -96,5 +100,37 @@ export const limaData: LimaData = {
 
     // Connections from Chorrillos
     // (already connected to Barranco, Surco)
+
+    // New Connections for SJL, Independencia, Los Olivos, Callao
+    // SJL <-> Lima Centro
+    { id: 'c101', from: 'sjl', to: 'lima_centro', distance: 12.0, danger: 4 },
+    { id: 'c102', from: 'lima_centro', to: 'sjl', distance: 12.0, danger: 4 },
+    // SJL <-> La Molina
+    { id: 'c103', from: 'sjl', to: 'la_molina', distance: 10.0, danger: 3 },
+    { id: 'c104', from: 'la_molina', to: 'sjl', distance: 10.0, danger: 3 },
+
+    // Independencia <-> Lima Centro
+    { id: 'c105', from: 'independencia', to: 'lima_centro', distance: 8.0, danger: 4 },
+    { id: 'c106', from: 'lima_centro', to: 'independencia', distance: 8.0, danger: 4 },
+    // Independencia <-> Los Olivos
+    { id: 'c107', from: 'independencia', to: 'los_olivos', distance: 4.0, danger: 3 },
+    { id: 'c108', from: 'los_olivos', to: 'independencia', distance: 4.0, danger: 3 },
+    // Independencia <-> Pueblo Libre
+    { id: 'c109', from: 'independencia', to: 'pueblo_libre', distance: 7.5, danger: 3 },
+    { id: 'c110', from: 'pueblo_libre', to: 'independencia', distance: 7.5, danger: 3 },
+
+    // Los Olivos <-> Callao
+    { id: 'c111', from: 'los_olivos', to: 'callao', distance: 9.0, danger: 3 },
+    { id: 'c112', from: 'callao', to: 'los_olivos', distance: 9.0, danger: 3 },
+    // Los Olivos <-> Magdalena del Mar
+    { id: 'c113', from: 'los_olivos', to: 'magdalena_del_mar', distance: 10.0, danger: 3 },
+    { id: 'c114', from: 'magdalena_del_mar', to: 'los_olivos', distance: 10.0, danger: 3 },
+
+    // Callao <-> Lima Centro
+    { id: 'c115', from: 'callao', to: 'lima_centro', distance: 11.0, danger: 4 },
+    { id: 'c116', from: 'lima_centro', to: 'callao', distance: 11.0, danger: 4 },
+    // Callao <-> Magdalena del Mar
+    { id: 'c117', from: 'callao', to: 'magdalena_del_mar', distance: 8.0, danger: 3 },
+    { id: 'c118', from: 'magdalena_del_mar', to: 'callao', distance: 8.0, danger: 3 },
   ],
 };
