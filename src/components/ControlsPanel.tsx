@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import type { District } from '@/types';
-import { Route, TrendingUp, ShieldAlert, Info, Brain } from 'lucide-react'; // Added Brain icon
+import { Route, TrendingUp, ShieldAlert, Info, Zap, Package } from 'lucide-react'; 
 
 interface ControlsPanelProps {
   districts: District[];
@@ -19,7 +19,8 @@ interface ControlsPanelProps {
   alpha: number;
   beta: number;
   onWeightChange: (newAlpha: number) => void;
-  onCalculatePath: () => void;
+  onCalculatePathSimple: () => void;
+  onCalculatePathHeap: () => void;
   isLoading: boolean;
   onShowDijkstraInfo: () => void;
 }
@@ -33,7 +34,8 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   alpha,
   beta,
   onWeightChange,
-  onCalculatePath,
+  onCalculatePathSimple,
+  onCalculatePathHeap,
   isLoading,
   onShowDijkstraInfo,
 }) => {
@@ -112,22 +114,31 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
            <p className="text-xs text-muted-foreground text-center pt-1">Ajusta el deslizador para priorizar menor distancia vs. mayor seguridad. Alfa + Beta = 1.</p>
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row gap-2 pt-4">
-        <Button 
-          onClick={onCalculatePath} 
-          disabled={isLoading || !origin || !destination} 
-          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground flex-1"
-        >
-          {isLoading ? 'Calculando...' : 'Calcular Ruta'}
-        </Button>
+      <CardFooter className="flex flex-col gap-2 pt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+            <Button 
+            onClick={onCalculatePathSimple} 
+            disabled={isLoading || !origin || !destination} 
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+            <Package className="mr-2 h-4 w-4" /> {isLoading ? 'Calculando...' : 'Ruta (O(V²))'}
+            </Button>
+            <Button 
+            onClick={onCalculatePathHeap} 
+            disabled={isLoading || !origin || !destination} 
+            className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+            >
+            <Zap className="mr-2 h-4 w-4" /> {isLoading ? 'Calculando...' : 'Ruta (Heap)'}
+            </Button>
+        </div>
         <Button 
           onClick={onShowDijkstraInfo}
           variant="outline" 
-          className="w-full sm:w-auto"
+          className="w-full"
           aria-label="Mostrar información del algoritmo de Dijkstra"
         >
           <Info className="mr-2 h-4 w-4" />
-          Info Algoritmo
+          Info Algoritmos
         </Button>
       </CardFooter>
     </Card>

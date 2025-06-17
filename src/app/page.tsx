@@ -11,7 +11,7 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 import { limaData } from '@/data/lima-data';
-import { dijkstra } from '@/lib/graph';
+import { dijkstraSimple, dijkstraWithHeap } from '@/lib/graph';
 import type { District, Connection, PathResult } from '@/types';
 
 
@@ -31,7 +31,9 @@ export default function HomePage() {
   
   const [isSelectingOrigin, setIsSelectingOrigin] = useState(true);
 
-  const [dijkstraCalculationTime, setDijkstraCalculationTime] = useState<number | null>(null);
+  const [dijkstraSimpleTime, setDijkstraSimpleTime] = useState<number | null>(null);
+  const [dijkstraHeapTime, setDijkstraHeapTime] = useState<number | null>(null);
+  const [lastAlgorithmUsed, setLastAlgorithmUsed] = useState<'simple' | 'heap' | null>(null);
   const [isDijkstraInfoDialogOpen, setIsDijkstraInfoDialogOpen] = useState(false);
 
 
@@ -46,7 +48,7 @@ export default function HomePage() {
     setBeta(parseFloat((1 - clampedAlpha).toFixed(2)));
   };
 
-  const handleCalculatePath = useCallback(async () => {
+  const calculatePath = useCallback(async (algorithmType: 'simple' | 'heap') => {
     if (!selectedOriginId || !selectedDestinationId) {
       toast({ title: "Selección Incompleta", description: "Por favor, selecciona los distritos de origen y destino.", variant: "destructive" });
       return;
@@ -61,7 +63,9 @@ export default function HomePage() {
           totalDangerScore: 0,
           totalWeightedCost: 0,
         });
-        setDijkstraCalculationTime(0);
+        if (algorithmType === 'simple') setDijkstraSimpleTime(0);
+        else setDijkstraHeapTime(0);
+        setLastAlgorithmUsed(algorithmType);
         toast({ title: "Ruta Calculada", description: "El origen y el destino son el mismo." });
       }
       return;
@@ -69,18 +73,28 @@ export default function HomePage() {
 
     setIsCalculatingPath(true);
     setPathResult(null); 
-    setDijkstraCalculationTime(null);
+    // Do not reset algorithm times here, so info dialog can show previous if any
+    
     try {
-      await new Promise(resolve => setTimeout(resolve, 100)); // Simulate a small delay for UI
+      await new Promise(resolve => setTimeout(resolve, 100)); 
       
       const startTime = performance.now();
-      const result = dijkstra(districtsList, connectionsList, selectedOriginId, selectedDestinationId, alpha, beta);
+      let result: PathResult | null = null;
+      if (algorithmType === 'simple') {
+        result = dijkstraSimple(districtsList, connectionsList, selectedOriginId, selectedDestinationId, alpha, beta);
+      } else {
+        result = dijkstraWithHeap(districtsList, connectionsList, selectedOriginId, selectedDestinationId, alpha, beta);
+      }
       const endTime = performance.now();
-      setDijkstraCalculationTime(endTime - startTime);
+      const calculationTime = endTime - startTime;
 
-      if (result) {
+      if (algorithmType === 'simple') setDijkstraSimpleTime(calculationTime);
+      else setDijkstraHeapTime(calculationTime);
+      setLastAlgorithmUsed(algorithmType);
+      
+      if (result && result.pathNodes.length > 0) {
         setPathResult(result);
-        toast({ title: "Ruta Calculada", description: "Ruta encontrada exitosamente." });
+        toast({ title: "Ruta Calculada", description: `Ruta encontrada exitosamente usando ${algorithmType === 'simple' ? 'O(V²)' : 'Heap'}.` });
       } else {
         toast({ title: "Ruta No Encontrada", description: "No se pudo encontrar una ruta entre los distritos seleccionados.", variant: "destructive" });
         setPathResult(null); 
@@ -89,6 +103,8 @@ export default function HomePage() {
       console.error("Error calculating path:", error);
       toast({ title: "Error de Cálculo", description: "Ocurrió un error al calcular la ruta.", variant: "destructive" });
       setPathResult(null);
+      if (algorithmType === 'simple') setDijkstraSimpleTime(null);
+      else setDijkstraHeapTime(null);
     } finally {
       setIsCalculatingPath(false);
     }
@@ -154,7 +170,8 @@ export default function HomePage() {
             alpha={alpha}
             beta={beta}
             onWeightChange={handleWeightChange}
-            onCalculatePath={handleCalculatePath}
+            onCalculatePathSimple={() => calculatePath('simple')}
+            onCalculatePathHeap={() => calculatePath('heap')}
             isLoading={isCalculatingPath}
             onShowDijkstraInfo={handleToggleDijkstraInfoDialog}
           />
@@ -193,7 +210,7 @@ export default function HomePage() {
                   Selección actual: <span className="font-semibold text-primary">{isSelectingOrigin ? 'Origen' : 'Destino'}</span>.
                 </CardDescription>
             </CardHeader>
-            <CardContent className="h-[calc(100%-4rem)] p-0"> {/* Adjusted padding to p-0 */}
+            <CardContent className="h-[calc(100%-4rem)] p-0">
               <MapComponent
                 districts={districtsList}
                 selectedOrigin={selectedOriginDistrict}
@@ -208,7 +225,11 @@ export default function HomePage() {
       <DijkstraInfoDialog
         isOpen={isDijkstraInfoDialogOpen}
         onClose={handleToggleDijkstraInfoDialog}
-        calculationTime={dijkstraCalculationTime}
+        simpleTime={dijkstraSimpleTime}
+        heapTime={dijkstraHeapTime}
+        lastAlgorithmUsed={lastAlgorithmUsed}
+        numDistricts={districtsList.length}
+        numConnections={connectionsList.length}
       />
     </main>
   );
