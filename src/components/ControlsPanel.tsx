@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import type { District } from '@/types';
-import { Route, TrendingUp, ShieldAlert } from 'lucide-react';
+import { Route, TrendingUp, ShieldAlert, Info, Brain } from 'lucide-react'; // Added Brain icon
 
 interface ControlsPanelProps {
   districts: District[];
@@ -21,6 +21,7 @@ interface ControlsPanelProps {
   onWeightChange: (newAlpha: number) => void;
   onCalculatePath: () => void;
   isLoading: boolean;
+  onShowDijkstraInfo: () => void;
 }
 
 const ControlsPanel: React.FC<ControlsPanelProps> = ({
@@ -34,6 +35,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   onWeightChange,
   onCalculatePath,
   isLoading,
+  onShowDijkstraInfo,
 }) => {
   const handleSliderChange = (value: number[]) => {
     onWeightChange(value[0]);
@@ -110,13 +112,22 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
            <p className="text-xs text-muted-foreground text-center pt-1">Ajusta el deslizador para priorizar menor distancia vs. mayor seguridad. Alfa + Beta = 1.</p>
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row gap-2">
+      <CardFooter className="flex flex-col sm:flex-row gap-2 pt-4">
         <Button 
           onClick={onCalculatePath} 
           disabled={isLoading || !origin || !destination} 
-          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground flex-1"
         >
           {isLoading ? 'Calculando...' : 'Calcular Ruta'}
+        </Button>
+        <Button 
+          onClick={onShowDijkstraInfo}
+          variant="outline" 
+          className="w-full sm:w-auto"
+          aria-label="Mostrar información del algoritmo de Dijkstra"
+        >
+          <Info className="mr-2 h-4 w-4" />
+          Info Algoritmo
         </Button>
       </CardFooter>
     </Card>

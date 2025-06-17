@@ -5,16 +5,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import MapComponent from '@/components/MapComponent';
 import ControlsPanel from '@/components/ControlsPanel';
 import ResultsDisplay from '@/components/ResultsDisplay';
+import DijkstraInfoDialog from '@/components/DijkstraInfoDialog'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 import { limaData } from '@/data/lima-data';
 import { dijkstra } from '@/lib/graph';
 import type { District, Connection, PathResult } from '@/types';
-// AI related imports are no longer needed here if the button is removed.
-// import { adjustRiskWeights, type AdjustRiskWeightsInput, type AdjustRiskWeightsOutput } from '@/ai/flows/dynamic-risk-assessment';
 
 
 export default function HomePage() {
@@ -30,11 +28,11 @@ export default function HomePage() {
 
   const [pathResult, setPathResult] = useState<PathResult | null>(null);
   const [isCalculatingPath, setIsCalculatingPath] = useState(false);
-  // const [isAdjustingWeights, setIsAdjustingWeights] = useState(false); // No longer needed
-  
-  // const [aiAdjustmentReason, setAiAdjustmentReason] = useState<string | null>(null); // No longer needed
   
   const [isSelectingOrigin, setIsSelectingOrigin] = useState(true);
+
+  const [dijkstraCalculationTime, setDijkstraCalculationTime] = useState<number | null>(null);
+  const [isDijkstraInfoDialogOpen, setIsDijkstraInfoDialogOpen] = useState(false);
 
 
   useEffect(() => {
@@ -46,7 +44,6 @@ export default function HomePage() {
     const clampedAlpha = Math.max(0, Math.min(1, parseFloat(newAlpha.toFixed(2))));
     setAlpha(clampedAlpha);
     setBeta(parseFloat((1 - clampedAlpha).toFixed(2)));
-    // setAiAdjustmentReason(null); // No longer needed if AI adjustment reason is removed
   };
 
   const handleCalculatePath = useCallback(async () => {
@@ -64,6 +61,7 @@ export default function HomePage() {
           totalDangerScore: 0,
           totalWeightedCost: 0,
         });
+        setDijkstraCalculationTime(0);
         toast({ title: "Ruta Calculada", description: "El origen y el destino son el mismo." });
       }
       return;
@@ -71,9 +69,15 @@ export default function HomePage() {
 
     setIsCalculatingPath(true);
     setPathResult(null); 
+    setDijkstraCalculationTime(null);
     try {
-      await new Promise(resolve => setTimeout(resolve, 300)); 
+      await new Promise(resolve => setTimeout(resolve, 100)); // Simulate a small delay for UI
+      
+      const startTime = performance.now();
       const result = dijkstra(districtsList, connectionsList, selectedOriginId, selectedDestinationId, alpha, beta);
+      const endTime = performance.now();
+      setDijkstraCalculationTime(endTime - startTime);
+
       if (result) {
         setPathResult(result);
         toast({ title: "Ruta Calculada", description: "Ruta encontrada exitosamente." });
@@ -90,7 +94,6 @@ export default function HomePage() {
     }
   }, [selectedOriginId, selectedDestinationId, alpha, beta, districtsList, connectionsList, toast]);
 
-  // handleAdjustWeightsAI function is removed as the button is removed.
 
   const handleMapDistrictClick = (districtId: string) => {
     const districtName = districtsList.find(d => d.id === districtId)?.name || 'Distrito Desconocido';
@@ -122,6 +125,10 @@ export default function HomePage() {
     setSelectedDestinationId(value);
   };
 
+  const handleToggleDijkstraInfoDialog = () => {
+    setIsDijkstraInfoDialogOpen(prev => !prev);
+  };
+
   const selectedOriginDistrict = districtsList.find(d => d.id === selectedOriginId) || null;
   const selectedDestinationDistrict = districtsList.find(d => d.id === selectedDestinationId) || null;
 
@@ -149,11 +156,11 @@ export default function HomePage() {
             onWeightChange={handleWeightChange}
             onCalculatePath={handleCalculatePath}
             isLoading={isCalculatingPath}
+            onShowDijkstraInfo={handleToggleDijkstraInfoDialog}
           />
            {pathResult && (
             <ResultsDisplay 
               pathResult={pathResult} 
-              // aiAdjustmentReason prop removed
             />
           )}
           {!pathResult && !isCalculatingPath && (
@@ -186,7 +193,7 @@ export default function HomePage() {
                   Selección actual: <span className="font-semibold text-primary">{isSelectingOrigin ? 'Origen' : 'Destino'}</span>.
                 </CardDescription>
             </CardHeader>
-            <CardContent className="h-[calc(100%-4rem)] p-0">
+            <CardContent className="h-[calc(100%-4rem)] p-0"> {/* Adjusted padding to p-0 */}
               <MapComponent
                 districts={districtsList}
                 selectedOrigin={selectedOriginDistrict}
@@ -198,6 +205,11 @@ export default function HomePage() {
           </Card>
         </div>
       </div>
+      <DijkstraInfoDialog
+        isOpen={isDijkstraInfoDialogOpen}
+        onClose={handleToggleDijkstraInfoDialog}
+        calculationTime={dijkstraCalculationTime}
+      />
     </main>
   );
 }
