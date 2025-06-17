@@ -68,15 +68,16 @@ export default function HomePage() {
         setLastAlgorithmUsed(algorithmType);
         toast({ title: "Ruta Calculada", description: "El origen y el destino son el mismo." });
       }
+      setIsCalculatingPath(false); // Ensure loading state is turned off
       return;
     }
 
     setIsCalculatingPath(true);
     setPathResult(null); 
-    // Do not reset algorithm times here, so info dialog can show previous if any
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 100)); 
+      // Simulate a small delay to ensure UI updates before potentially blocking calculation
+      await new Promise(resolve => setTimeout(resolve, 50)); 
       
       const startTime = performance.now();
       let result: PathResult | null = null;
@@ -94,7 +95,7 @@ export default function HomePage() {
       
       if (result && result.pathNodes.length > 0) {
         setPathResult(result);
-        toast({ title: "Ruta Calculada", description: `Ruta encontrada exitosamente usando ${algorithmType === 'simple' ? 'O(V²)' : 'Heap'}.` });
+        toast({ title: "Ruta Calculada", description: `Ruta encontrada exitosamente usando Dijkstra ${algorithmType === 'simple' ? 'Simple (O(V²))' : 'con Heap (O(E log V))'}.` });
       } else {
         toast({ title: "Ruta No Encontrada", description: "No se pudo encontrar una ruta entre los distritos seleccionados.", variant: "destructive" });
         setPathResult(null); 
@@ -103,7 +104,8 @@ export default function HomePage() {
       console.error("Error calculating path:", error);
       toast({ title: "Error de Cálculo", description: "Ocurrió un error al calcular la ruta.", variant: "destructive" });
       setPathResult(null);
-      if (algorithmType === 'simple') setDijkstraSimpleTime(null);
+      // Reset times on error too
+      if (algorithmType === 'simple') setDijkstraSimpleTime(null); 
       else setDijkstraHeapTime(null);
     } finally {
       setIsCalculatingPath(false);
@@ -118,18 +120,21 @@ export default function HomePage() {
       toast({ title: "Origen Seleccionado", description: `${districtName} establecido como origen.`});
       if (districtId === selectedDestinationId) { 
         setSelectedDestinationId(null); 
-        setIsSelectingOrigin(false); 
-        return;
       }
+      setIsSelectingOrigin(false); // Always switch to destination selection after origin
     } else { 
-      if (districtId === selectedOriginId) {
-        toast({ title: "Selección Inválida", description: "El destino no puede ser el mismo que el origen.", variant: "destructive"});
-        return; 
+      if (districtId === selectedOriginId) { // If re-clicking origin, do nothing or allow re-selection? For now, treat as new destination
+        // toast({ title: "Selección Inválida", description: "El destino no puede ser el mismo que el origen.", variant: "destructive"});
+        // return; 
+         setSelectedDestinationId(districtId); // This makes origin and dest same, path calc will handle.
+         toast({ title: "Destino Seleccionado", description: `${districtName} establecido como destino.`});
+
+      } else {
+        setSelectedDestinationId(districtId);
+        toast({ title: "Destino Seleccionado", description: `${districtName} establecido como destino.`});
       }
-      setSelectedDestinationId(districtId);
-      toast({ title: "Destino Seleccionado", description: `${districtName} establecido como destino.`});
+      setIsSelectingOrigin(true); // Switch back to origin selection
     }
-    setIsSelectingOrigin(!isSelectingOrigin); 
   };
   
   const handleOriginSelectChange = (value: string) => {
@@ -230,7 +235,10 @@ export default function HomePage() {
         lastAlgorithmUsed={lastAlgorithmUsed}
         numDistricts={districtsList.length}
         numConnections={connectionsList.length}
+        isSameOriginDest={selectedOriginId !== null && selectedOriginId === selectedDestinationId}
       />
     </main>
   );
 }
+
+    
