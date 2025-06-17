@@ -8,44 +8,72 @@ import type { District, PathSegment } from '@/types';
 import { getDangerColor, getDangerStrokeWeight } from '@/lib/graph';
 import { MapPin } from 'lucide-react';
 
-// New component to handle Polyline rendering directly using google.maps.Polyline
+// New component to handle Polyline rendering using Google Maps Directions Service
 const PathRenderer: React.FC<{ pathSegments: PathSegment[] }> = ({ pathSegments }) => {
   const map = useMap(); 
-  const routesLibrary = useMapsLibrary('routes');
+  const routesLibrary = useMapsLibrary('routes'); // Ensures DirectionsService is available
+  const directionsServiceRef = React.useRef<google.maps.DirectionsService | null>(null);
   const drawnPolylinesRef = React.useRef<google.maps.Polyline[]>([]);
 
   React.useEffect(() => {
-    if (!map) {
-      return;
-    }
-    if (!routesLibrary) {
-      return;
-    }
-    if (typeof google === 'undefined' || !google.maps || !google.maps.Polyline) {
-      console.error('[PathRenderer] google.maps.Polyline constructor is not available. Path lines cannot be drawn.');
+    if (!map || !routesLibrary || typeof google === 'undefined' || !google.maps || !google.maps.Polyline || !google.maps.DirectionsService) {
+      console.error('[PathRenderer] Google Maps API or required libraries not available. Path lines cannot be drawn.');
       return;
     }
 
+    if (!directionsServiceRef.current) {
+      directionsServiceRef.current = new google.maps.DirectionsService();
+    }
+    const directionsService = directionsServiceRef.current;
+
+    // Clear existing polylines
     drawnPolylinesRef.current.forEach(polyline => polyline.setMap(null));
     drawnPolylinesRef.current = [];
 
     if (pathSegments && pathSegments.length > 0) {
-      pathSegments.forEach((segment) => {
-        try {
-          const polylineInstance = new google.maps.Polyline({
-            path: [
-              { lat: segment.from.lat, lng: segment.from.lng },
-              { lat: segment.to.lat, lng: segment.to.lng },
-            ],
-            strokeColor: getDangerColor(segment.danger),
-            strokeOpacity: 0.9,
-            strokeWeight: getDangerStrokeWeight(segment.danger),
-            map: map, 
-          });
-          drawnPolylinesRef.current.push(polylineInstance);
-        } catch (error) {
-          console.error('[PathRenderer] Error creating Polyline for segment:', segment, error);
-        }
+      pathSegments.forEach((segment, index) => {
+        const request: google.maps.DirectionsRequest = {
+          origin: { lat: segment.from.lat, lng: segment.from.lng },
+          destination: { lat: segment.to.lat, lng: segment.to.lng },
+          travelMode: google.maps.TravelMode.DRIVING, // You can change this (WALKING, BICYCLING)
+        };
+
+        directionsService.route(request, (result, status) => {
+          if (status === google.maps.DirectionsStatus.OK && result && result.routes && result.routes.length > 0) {
+            try {
+              const routePath = result.routes[0].overview_path;
+              const polylineInstance = new google.maps.Polyline({
+                path: routePath,
+                strokeColor: getDangerColor(segment.danger),
+                strokeOpacity: 0.9,
+                strokeWeight: getDangerStrokeWeight(segment.danger),
+                map: map,
+              });
+              drawnPolylinesRef.current.push(polylineInstance);
+            } catch (error) {
+               console.error(`[PathRenderer] Error creating Polyline for segment ${index} from DirectionsResult:`, segment, error);
+            }
+          } else {
+            console.error(`[PathRenderer] Directions request failed for segment ${index} due to ${status}. Falling back to straight line.`);
+            // Fallback to straight line if DirectionsService fails for a segment
+            try {
+              const fallbackPolyline = new google.maps.Polyline({
+                path: [
+                  { lat: segment.from.lat, lng: segment.from.lng },
+                  { lat: segment.to.lat, lng: segment.to.lng },
+                ],
+                strokeColor: getDangerColor(segment.danger),
+                strokeOpacity: 0.7, // Slightly more transparent for fallback
+                strokeWeight: getDangerStrokeWeight(segment.danger) -1, // Slightly thinner for fallback
+                geodesic: true,
+                map: map,
+              });
+              drawnPolylinesRef.current.push(fallbackPolyline);
+            } catch (error) {
+              console.error(`[PathRenderer] Error creating fallback Polyline for segment ${index}:`, segment, error);
+            }
+          }
+        });
       });
     }
 
@@ -111,11 +139,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
         strokeColor: '#FFFFFF'
       };
     }
+    // Fallback to default marker if SymbolPath is not ready
     return undefined; 
   };
 
   return (
-    <APIProvider apiKey={apiKey}>
+    <APIProvider apiKey={apiKey} libraries={['routes']}> {/* Ensure 'routes' library is loaded here */}
       <Map
         defaultCenter={center}
         defaultZoom={zoom}
@@ -152,3 +181,4 @@ const MapComponent: React.FC<MapComponentProps> = ({
 };
 
 export default MapComponent;
+

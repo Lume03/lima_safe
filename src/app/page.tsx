@@ -132,7 +132,7 @@ export default function HomePage() {
           Ruta Segura en Lima
         </h1>
         <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-          Navega por Lima con confianza. Encuentra los caminos más seguros y cortos.
+          ADA Grupo 5
         </p>
       </header>
 
