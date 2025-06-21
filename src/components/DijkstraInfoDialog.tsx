@@ -45,7 +45,7 @@ const DijkstraInfoDialog: React.FC<DijkstraInfoDialogProps> = ({
   // For E, we are counting directed edges. If connections are bidirectional and listed once, E = connections.length.
   // If listed twice (A->B, B->A), E = connections.length.
   // Dijkstra's complexity often refers to E as number of edges algorithm traverses.
-  const e = connectionsList.length; // Assuming connectionsList represents unique directed edges or that dijkstra handles them as such.
+  const e = numConnections; // Use the prop passed from page.tsx
 
 
   return (
@@ -144,12 +144,4 @@ const DijkstraInfoDialog: React.FC<DijkstraInfoDialogProps> = ({
   );
 };
 
-// Placeholder for connectionsList length calculation (assuming limaData is somehow accessible or passed)
-// This is a simplification. In a real app, you'd pass numConnections directly or calculate it from props.
-import { limaData } from '@/data/lima-data'; 
-const connectionsList = limaData.connections;
-
-
 export default DijkstraInfoDialog;
-
-    
