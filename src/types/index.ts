@@ -4,6 +4,7 @@ export interface District {
   name: string;
   lat: number;
   lng: number;
+  danger: number; // 1-5 (1 = safest, 5 = most dangerous)
 }
 
 export interface Connection {
