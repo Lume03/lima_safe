@@ -42,10 +42,7 @@ const DijkstraInfoDialog: React.FC<DijkstraInfoDialogProps> = ({
 
   const lastCalculationTime = lastAlgorithmUsed === 'simple' ? simpleTime : (lastAlgorithmUsed === 'heap' ? heapTime : null);
   const v = numDistricts;
-  // For E, we are counting directed edges. If connections are bidirectional and listed once, E = connections.length.
-  // If listed twice (A->B, B->A), E = connections.length.
-  // Dijkstra's complexity often refers to E as number of edges algorithm traverses.
-  const e = numConnections; // Use the prop passed from page.tsx
+  const e = numConnections; 
 
 
   return (
@@ -57,7 +54,7 @@ const DijkstraInfoDialog: React.FC<DijkstraInfoDialogProps> = ({
             Sobre los Algoritmos de Dijkstra
           </DialogTitle>
           <DialogDescription>
-            Información sobre las implementaciones y su rendimiento en esta aplicación.
+            Información sobre las implementaciones y su rendimiento teórico en esta aplicación.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[65vh] pr-5 -mr-2">
@@ -88,7 +85,10 @@ const DijkstraInfoDialog: React.FC<DijkstraInfoDialogProps> = ({
             </div>
 
             <div>
-                <h4 className="font-semibold text-primary mb-2 flex items-center"><Timer className="mr-2 h-4 w-4"/>Rendimiento Registrado</h4>
+                <h4 className="font-semibold text-primary mb-2 flex items-center"><Timer className="mr-2 h-4 w-4"/>Rendimiento Teórico (Simulado)</h4>
+                <p className="text-xs text-muted-foreground italic text-center -mt-1 mb-3">
+                  Estos tiempos son referenciales, calculados para ilustrar la diferencia de complejidad teórica. No miden el tiempo de ejecución real.
+                </p>
                 {isSameOriginDest && lastCalculationTime === 0 && (
                      <p className="text-xs text-center italic text-muted-foreground mb-2">
                         (El último cálculo fue para el mismo origen y destino, tiempo = 0 ms por definición)
@@ -119,13 +119,13 @@ const DijkstraInfoDialog: React.FC<DijkstraInfoDialogProps> = ({
               <h4 className="font-semibold text-primary mb-1 flex items-center"><Shuffle className="mr-2 h-4 w-4" />Consideraciones de Rendimiento</h4>
               <div className="space-y-2 text-muted-foreground">
                 <p>
-                  <strong className="text-foreground">Implementación Simple (O(V²)):</strong> En cada uno de los V pasos, busca linealmente entre hasta V nodos no visitados para encontrar el de menor costo. Su complejidad es aproximadamente V * V = V².
+                  <strong className="text-foreground">Implementación Simple (O(V²)):</strong> Su tiempo de ejecución simulado crece cuadráticamente con el número de distritos (V). Es simple de implementar pero ineficiente para grafos grandes.
                 </p>
                 <p>
-                  <strong className="text-foreground">Implementación con Heap Binario (O(E log V)):</strong> Utiliza una cola de prioridad (Min-Heap) para encontrar el nodo de menor costo de forma más eficiente (O(log V)). Cada una de las E aristas puede causar una actualización en el heap (también O(log V)). En total, es O(E log V) si E es mayor que V, o O((V+E)logV) para ser precisos.
+                  <strong className="text-foreground">Implementación con Heap Binario (O(E log V)):</strong> Su tiempo simulado depende de las conexiones (E) y del logaritmo de los distritos (V), haciéndolo mucho más eficiente para grafos grandes y densos.
                 </p>
                 <p className="italic">
-                  <strong className="text-foreground">Nota sobre grafos pequeños:</strong> Para un número reducido de distritos y conexiones como en este demo (V={v}, E={e}), la diferencia de rendimiento puede no ser drástica, o incluso la versión "simple" podría ser marginalmente más rápida en algunas ejecuciones. Esto se debe al costo fijo (overhead) de mantener la estructura del heap. La ventaja teórica de O(E log V) se vuelve claramente dominante en grafos mucho más grandes. Los tiempos de 0.00ms pueden ocurrir si la ejecución es extremadamente rápida, por debajo de la resolución de la medición del navegador.
+                  <strong className="text-foreground">Nota sobre la simulación:</strong> Los tiempos en esta ventana se calculan para reflejar la ventaja teórica de O(E log V) sobre O(V²). En un grafo mucho más grande que el de este demo (V={v}, E={e}), la diferencia en el tiempo de ejecución real sería drástica.
                 </p>
               </div>
             </div>
