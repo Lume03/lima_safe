@@ -125,7 +125,7 @@ export default function HomePage() {
           Ruta Segura en Lima (Nivel San Miguel)
         </h1>
         <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-          Demostración de Dijkstra con Grafo Detallado
+          Demostraciones de Dijkstra con Grafo Detallado
         </p>
       </header>
 
