@@ -1,12 +1,14 @@
+
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap, useMapsLibrary, Pin } from '@vis.gl/react-google-maps';
-import type { GraphNode, LatLng } from '@/types'; 
+import type { GraphNode, LatLng } from '@/types';
 import { getDangerColor, getDangerStrokeWeight } from '@/lib/graph-logic';
 
 const PathRenderer: React.FC<{ pathNodes: GraphNode[] }> = ({ pathNodes }) => {
   const map = useMap();
+  const routesLibrary = useMapsLibrary('routes');
   const drawnPolylinesRef = useRef<google.maps.Polyline[]>([]);
 
   useEffect(() => {
@@ -15,39 +17,59 @@ const PathRenderer: React.FC<{ pathNodes: GraphNode[] }> = ({ pathNodes }) => {
       drawnPolylinesRef.current = [];
     };
 
-    if (!map || pathNodes.length < 2) {
+    if (!map || !routesLibrary || pathNodes.length < 2) {
       cleanup();
       return;
     }
 
-    cleanup(); // Clear previous path
+    const directionsService = new routesLibrary.DirectionsService();
 
-    for (let i = 0; i < pathNodes.length - 1; i++) {
-      const fromNode = pathNodes[i];
-      const toNode = pathNodes[i + 1];
-      
-      const edge = fromNode.edges.find(e => e.target === toNode.id);
-      if (!edge) continue;
+    const request: google.maps.DirectionsRequest = {
+      origin: { lat: pathNodes[0].lat, lng: pathNodes[0].lon },
+      destination: { lat: pathNodes[pathNodes.length - 1].lat, lng: pathNodes[pathNodes.length - 1].lon },
+      waypoints: pathNodes.slice(1, -1).map(node => ({
+        location: { lat: node.lat, lng: node.lon },
+        stopover: false
+      })),
+      travelMode: google.maps.TravelMode.DRIVING,
+    };
 
-      const pathCoordinates = [
-        { lat: fromNode.lat, lng: fromNode.lon },
-        { lat: toNode.lat, lng: toNode.lon }
-      ];
+    directionsService.route(request, (result, status) => {
+      cleanup(); // Clean up before drawing new lines
 
-      const polyline = new google.maps.Polyline({
-        path: pathCoordinates,
-        strokeColor: getDangerColor(edge.peligrosidad),
-        strokeOpacity: 0.9,
-        strokeWeight: getDangerStrokeWeight(edge.peligrosidad),
-        map: map,
-      });
+      if (status === google.maps.DirectionsStatus.OK && result) {
+        // We should have one leg for each segment of our path
+        result.routes[0].legs.forEach((leg, index) => {
+          const fromNode = pathNodes[index];
+          const toNode = pathNodes[index + 1];
+          const edge = fromNode.edges.find(e => e.target === toNode.id);
+          
+          if (!edge) return;
 
-      drawnPolylinesRef.current.push(polyline);
-    }
-    
+          const color = getDangerColor(edge.peligrosidad);
+          const weight = getDangerStrokeWeight(edge.peligrosidad);
+
+          // The path for this leg is the concatenation of the paths of its steps
+          const pathForLeg = leg.steps.flatMap(step => step.path);
+          
+          const polyline = new google.maps.Polyline({
+            path: pathForLeg,
+            strokeColor: color,
+            strokeOpacity: 0.9,
+            strokeWeight: weight,
+            map: map,
+            zIndex: 1,
+          });
+
+          drawnPolylinesRef.current.push(polyline);
+        });
+      } else {
+        console.error(`Error fetching directions ${result}`);
+      }
+    });
+
     return cleanup;
-
-  }, [map, pathNodes]);
+  }, [map, routesLibrary, pathNodes]);
 
   return null;
 };
@@ -110,7 +132,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
 
   return (
-    <APIProvider apiKey={apiKey}>
+    <APIProvider apiKey={apiKey} libraries={['routes']}>
       <Map
         defaultCenter={center}
         defaultZoom={zoom}
@@ -135,12 +157,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
         }
         
         {startNode && (
-          <InfoWindow position={{ lat: startNode.lat, lng: startNode.lon }}>
+          <InfoWindow position={{ lat: startNode.lat, lng: startNode.lon }} zIndex={11}>
             <div className="p-1 font-medium">Origen (Nodo {startNode.id})</div>
           </InfoWindow>
         )}
         {endNode && (
-          <InfoWindow position={{ lat: endNode.lat, lng: endNode.lon }}>
+          <InfoWindow position={{ lat: endNode.lat, lng: endNode.lon }} zIndex={11}>
              <div className="p-1 font-medium">Destino (Nodo {endNode.id})</div>
           </InfoWindow>
         )}
