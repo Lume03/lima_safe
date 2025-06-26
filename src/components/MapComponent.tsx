@@ -120,7 +120,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     // This check ensures google.maps is available before trying to use it.
     if (typeof window !== 'undefined' && window.google && window.google.maps) {
       return {
-        path: window.google.maps.SymbolPath.CIRCLE,
+        path: 0, // window.google.maps.SymbolPath.CIRCLE
         scale: 8,
         fillColor: selectedOrigin?.id === district.id ? '#FF9800' : (selectedDestination?.id === district.id ? '#3F51B5' : '#777777'),
         fillOpacity: 1,
