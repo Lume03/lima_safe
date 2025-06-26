@@ -77,7 +77,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
   zoom = 15,
 }) => {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  const [clickedNode, setClickedNode] = useState<GraphNode | null>(null);
 
   if (!apiKey) {
     return (
@@ -91,23 +90,13 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
   // Memoize markers to avoid re-rendering all of them on every state change
   const markers = React.useMemo(() => {
-    // Only show nodes in the path or the selected start/end nodes
-    const nodesInPathIds = new Set(pathNodes.map(n => n.id));
-    const relevantNodes = nodes.filter(node => 
-        nodesInPathIds.has(node.id) || 
-        node.id === startNode?.id || 
-        node.id === endNode?.id
-    );
-
-    // If no path or selection, show a subset of nodes to avoid clutter
-    const nodesToRender = relevantNodes.length > 0 ? relevantNodes : nodes.slice(0, 200);
-
-    return nodesToRender.map(node => (
+    // Show all nodes to ensure they are always selectable.
+    return nodes.map(node => (
       <AdvancedMarker
         key={node.id}
         position={{ lat: node.lat, lng: node.lon }}
         onClick={() => onMapClick({ lat: node.lat, lng: node.lon })}
-        title={`Node ${node.id}`}
+        title={`Nodo ${node.id}`}
       >
         <Pin 
             background={'#F5F5F5'}
@@ -117,7 +106,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         />
       </AdvancedMarker>
     ));
-  }, [nodes, pathNodes, startNode, endNode, onMapClick]);
+  }, [nodes, onMapClick]);
 
 
   return (
@@ -135,13 +124,13 @@ const MapComponent: React.FC<MapComponentProps> = ({
         <PathRenderer pathNodes={pathNodes} />
         
         {startPoint && 
-          <AdvancedMarker position={startPoint}>
-             <Pin background={'#22C55E'} borderColor={'#16A34A'} glyphColor={'#FFFFFF'}/>
+          <AdvancedMarker position={startPoint} zIndex={10}>
+             <Pin background={'#22C55E'} borderColor={'#16A34A'} glyphColor={'#FFFFFF'} scale={1.2}/>
           </AdvancedMarker>
         }
         {endPoint && 
-          <AdvancedMarker position={endPoint}>
-             <Pin background={'#EF4444'} borderColor={'#DC2626'} glyphColor={'#FFFFFF'}/>
+          <AdvancedMarker position={endPoint} zIndex={10}>
+             <Pin background={'#EF4444'} borderColor={'#DC2626'} glyphColor={'#FFFFFF'} scale={1.2}/>
           </AdvancedMarker>
         }
         

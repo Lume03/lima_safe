@@ -27,7 +27,9 @@ export default function HomePage() {
   const [isCalculatingPath, setIsCalculatingPath] = useState(false);
   const [pathResult, setPathResult] = useState<PathResult | null>(null);
 
-  const [weightType, setWeightType] = useState<'length' | 'peligrosidad'>('length');
+  // Use a single state for safety weight (0 to 1). Distance weight will be 1 - safetyWeight.
+  const [safetyWeight, setSafetyWeight] = useState(0.5);
+  const distanceWeight = 1 - safetyWeight;
   
   const [isSelectingStart, setIsSelectingStart] = useState(true);
   const [isDijkstraInfoDialogOpen, setIsDijkstraInfoDialogOpen] = useState(false);
@@ -55,9 +57,10 @@ export default function HomePage() {
 
     const nearestNode = graph.findNearestNode(coords.lat, coords.lng);
     const pointName = isSelectingStart ? 'Origen' : 'Destino';
+    const nearestNodeCoords = { lat: nearestNode.lat, lng: nearestNode.lon };
 
     if (isSelectingStart) {
-      setStartPoint(coords);
+      setStartPoint(nearestNodeCoords); // Snap marker to the node
       setStartNode(nearestNode);
       if (endNode && nearestNode.id === endNode.id) {
         setEndPoint(null);
@@ -69,7 +72,7 @@ export default function HomePage() {
          toast({ title: "Selección Inválida", description: "El destino no puede ser el mismo que el origen.", variant: "destructive" });
          return;
       }
-      setEndPoint(coords);
+      setEndPoint(nearestNodeCoords); // Snap marker to the node
       setEndNode(nearestNode);
       setIsSelectingStart(true); 
     }
@@ -90,8 +93,8 @@ export default function HomePage() {
       try {
         const startTime = performance.now();
         const result = algorithm === 'simple' 
-          ? dijkstra(graph, startNode.id, endNode.id, weightType)
-          : dijkstraHeap(graph, startNode.id, endNode.id, weightType);
+          ? dijkstra(graph, startNode.id, endNode.id, distanceWeight, safetyWeight)
+          : dijkstraHeap(graph, startNode.id, endNode.id, distanceWeight, safetyWeight);
         const endTime = performance.now();
 
         if (result && result.path.length > 0) {
@@ -109,7 +112,7 @@ export default function HomePage() {
         setIsCalculatingPath(false);
       }
     }, 50);
-  }, [graph, startNode, endNode, weightType, toast]);
+  }, [graph, startNode, endNode, distanceWeight, safetyWeight, toast]);
 
   const clearSelection = () => {
     setStartPoint(null);
@@ -148,8 +151,8 @@ export default function HomePage() {
           <ControlsPanel
             startNode={startNode}
             endNode={endNode}
-            weightType={weightType}
-            onWeightTypeChange={setWeightType}
+            safetyWeight={safetyWeight}
+            onWeightChange={setSafetyWeight}
             onCalculatePathSimple={() => calculatePath('simple')}
             onCalculatePathHeap={() => calculatePath('heap')}
             isLoading={isCalculatingPath}

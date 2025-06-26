@@ -4,15 +4,15 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Slider } from '@/components/ui/slider';
 import type { GraphNode } from '@/types';
 import { Route, Info, Zap, Package, MapPin, X, Shield, Goal } from 'lucide-react'; 
 
 interface ControlsPanelProps {
   startNode: GraphNode | null;
   endNode: GraphNode | null;
-  weightType: 'length' | 'peligrosidad';
-  onWeightTypeChange: (value: 'length' | 'peligrosidad') => void;
+  safetyWeight: number;
+  onWeightChange: (value: number) => void;
   onCalculatePathSimple: () => void;
   onCalculatePathHeap: () => void;
   isLoading: boolean;
@@ -23,8 +23,8 @@ interface ControlsPanelProps {
 const ControlsPanel: React.FC<ControlsPanelProps> = ({
   startNode,
   endNode,
-  weightType,
-  onWeightTypeChange,
+  safetyWeight,
+  onWeightChange,
   onCalculatePathSimple,
   onCalculatePathHeap,
   isLoading,
@@ -63,35 +63,22 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
         </div>
 
         <div className="space-y-3">
-            <Label htmlFor="weight-type" className="text-base">Priorizar Ruta Por</Label>
-            <RadioGroup
-                id="weight-type"
-                value={weightType}
-                onValueChange={(value) => onWeightTypeChange(value as 'length' | 'peligrosidad')}
-                className="grid grid-cols-2 gap-4"
-            >
-                <div>
-                    <RadioGroupItem value="length" id="length" className="peer sr-only" />
-                    <Label
-                        htmlFor="length"
-                        className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                    >
-                        <Route className="mb-3 h-6 w-6" />
-                        Distancia
-                    </Label>
-                </div>
-
-                <div>
-                    <RadioGroupItem value="peligrosidad" id="peligrosidad" className="peer sr-only" />
-                    <Label
-                        htmlFor="peligrosidad"
-                        className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                    >
-                        <Shield className="mb-3 h-6 w-6" />
-                        Seguridad
-                    </Label>
-                </div>
-            </RadioGroup>
+            <Label htmlFor="weight-slider" className="text-base">Priorizar Ruta Por</Label>
+             <div className="grid gap-2 pt-1">
+              <Slider
+                id="weight-slider"
+                min={0}
+                max={1}
+                step={0.01}
+                value={[safetyWeight]}
+                onValueChange={(value) => onWeightChange(value[0])}
+                disabled={isLoading}
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span className="flex items-center"><Route className="mr-1 h-3 w-3" /> Distancia</span>
+                <span className="flex items-center">Seguridad <Shield className="ml-1 h-3 w-3" /></span>
+              </div>
+            </div>
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-2 pt-4">

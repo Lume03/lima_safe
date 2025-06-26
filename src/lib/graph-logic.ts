@@ -30,7 +30,11 @@ class MinHeap {
   
   decreaseKey(id: string, newCost: number): void {
     const index = this.positions.get(id);
-    if (index === undefined) return;
+    if (index === undefined) {
+        // If the node is not in the heap, insert it. This can happen if we don't pre-populate.
+        this.insert(id, newCost);
+        return;
+    }
 
     if (this.heap[index].cost > newCost) {
         this.heap[index].cost = newCost;
@@ -116,7 +120,7 @@ export class Graph {
     }
 }
 
-function runDijkstra(graph: Graph, startId: string, endId: string, weightType: 'length' | 'peligrosidad', useHeap: boolean): PathResult | null {
+function runDijkstra(graph: Graph, startId: string, endId: string, distanceWeight: number, safetyWeight: number, useHeap: boolean): PathResult | null {
     const costs: { [key: string]: number } = {};
     const parents: { [key: string]: string | null } = {};
     const processed = new Set<string>();
@@ -131,6 +135,7 @@ function runDijkstra(graph: Graph, startId: string, endId: string, weightType: '
     let priorityQueue: MinHeap | null = null;
     if (useHeap) {
         priorityQueue = new MinHeap();
+        // Insert only the start node initially. Other nodes will be added as they are discovered.
         priorityQueue.insert(startId, 0);
     }
     
@@ -146,12 +151,13 @@ function runDijkstra(graph: Graph, startId: string, endId: string, weightType: '
         } else {
              // Simple O(V^2) version: find lowest cost node among unprocessed
             let lowestCost = Infinity;
-            graph.nodes.forEach(node => {
-                if (costs[node.id] < lowestCost && !processed.has(node.id)) {
-                    lowestCost = costs[node.id];
-                    currentNodeId = node.id;
+            currentNodeId = null;
+            for (const nodeId of graph.nodes.keys()) {
+                if (costs[nodeId] < lowestCost && !processed.has(nodeId)) {
+                    lowestCost = costs[nodeId];
+                    currentNodeId = nodeId;
                 }
-            });
+            }
             if (currentNodeId === null || lowestCost === Infinity) break;
         }
 
@@ -163,7 +169,7 @@ function runDijkstra(graph: Graph, startId: string, endId: string, weightType: '
         if (currentNodeId === endId) break;
 
         graph.getAdjacencyList(currentNodeId).forEach(edge => {
-            const weight = edge[weightType];
+            const weight = edge.length * distanceWeight + edge.peligrosidad * safetyWeight;
             const newCost = costs[currentNodeId!] + weight;
 
             if (newCost < costs[edge.target]) {
@@ -210,11 +216,11 @@ function runDijkstra(graph: Graph, startId: string, endId: string, weightType: '
     };
 }
 
-export const dijkstra = (graph: Graph, startId: string, endId: string, weightType: 'length' | 'peligrosidad') => 
-    runDijkstra(graph, startId, endId, weightType, false);
+export const dijkstra = (graph: Graph, startId: string, endId: string, distanceWeight: number, safetyWeight: number) => 
+    runDijkstra(graph, startId, endId, distanceWeight, safetyWeight, false);
 
-export const dijkstraHeap = (graph: Graph, startId: string, endId: string, weightType: 'length' | 'peligrosidad') => 
-    runDijkstra(graph, startId, endId, weightType, true);
+export const dijkstraHeap = (graph: Graph, startId: string, endId: string, distanceWeight: number, safetyWeight: number) => 
+    runDijkstra(graph, startId, endId, distanceWeight, safetyWeight, true);
 
 
 export function getDangerColor(dangerLevel: number): string {
