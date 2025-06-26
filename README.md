@@ -1,5 +1,5 @@
-# Firebase Studio
+🛡️ Ruta Segura Lima
 
-This is a NextJS starter in Firebase Studio.
+Tu copiloto para navegar con confianza por las calles de Lima.
 
-To get started, take a look at src/app/page.tsx.
+Una aplicación web diseñada para ofrecer a los ciudadanos de Lima una herramienta intuitiva y potente para visualizar zonas de riesgo y planificar rutas más seguras en la ciudad , 
