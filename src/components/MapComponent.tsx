@@ -82,7 +82,7 @@ const PathRenderer: React.FC<{ pathSegments: PathSegment[] }> = ({ pathSegments 
           const pathForLeg = leg.steps.flatMap(step => step.path);
 
           // Create and draw a new Polyline for this leg
-          const polyline = new routesLibrary.Polyline({
+          const polyline = new google.maps.Polyline({
             path: pathForLeg,
             strokeColor: color,
             strokeOpacity: 0.9,
