@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import MapComponent from '@/components/MapComponent';
 import ControlsPanel from '@/components/ControlsPanel';
 import ResultsDisplay from '@/components/ResultsDisplay';
-import DijkstraInfoDialog from '@/components/DijkstraInfoDialog';
+import AlgorithmInfoPanel from '@/components/AlgorithmInfoPanel';
 
 import { Graph, dijkstra, dijkstraHeap } from '@/lib/graph-logic';
 import type { GraphNode, PathResult, LatLng, GraphData } from '@/types';
@@ -33,7 +33,6 @@ export default function HomePage() {
   const distanceWeight = 1 - safetyWeight;
   
   const [isSelectingStart, setIsSelectingStart] = useState(true);
-  const [isDijkstraInfoDialogOpen, setIsDijkstraInfoDialogOpen] = useState(false);
 
 
   const handleMapClick = useCallback((coords: LatLng) => {
@@ -140,7 +139,6 @@ export default function HomePage() {
             onCalculatePathSimple={() => calculatePath('simple')}
             onCalculatePathHeap={() => calculatePath('heap')}
             isLoading={isCalculatingPath}
-            onShowDijkstraInfo={() => setIsDijkstraInfoDialogOpen(true)}
             onClear={clearSelection}
           />
           {isCalculatingPath && (
@@ -166,6 +164,11 @@ export default function HomePage() {
               </CardContent>
             </Card>
           )}
+           <AlgorithmInfoPanel 
+            lastResult={pathResult}
+            numNodes={graphData.nodes.length}
+            numEdges={graphData.edges.length}
+          />
         </div>
 
         <div className="lg:col-span-2">
@@ -191,13 +194,6 @@ export default function HomePage() {
           </Card>
         </div>
       </div>
-      <DijkstraInfoDialog
-        isOpen={isDijkstraInfoDialogOpen}
-        onClose={() => setIsDijkstraInfoDialogOpen(false)}
-        lastResult={pathResult}
-        numNodes={graphData.nodes.length}
-        numEdges={graphData.edges.length}
-      />
     </main>
   );
 }

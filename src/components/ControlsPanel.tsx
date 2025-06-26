@@ -16,7 +16,6 @@ interface ControlsPanelProps {
   onCalculatePathSimple: () => void;
   onCalculatePathHeap: () => void;
   isLoading: boolean;
-  onShowDijkstraInfo: () => void;
   onClear: () => void;
 }
 
@@ -28,7 +27,6 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   onCalculatePathSimple,
   onCalculatePathHeap,
   isLoading,
-  onShowDijkstraInfo,
   onClear,
 }) => {
 
@@ -98,15 +96,6 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
             <Zap className="mr-2 h-4 w-4" /> {isLoading ? 'Calculando...' : 'Dijkstra (Heap)'}
             </Button>
         </div>
-        <Button 
-          onClick={onShowDijkstraInfo}
-          variant="outline" 
-          className="w-full"
-          aria-label="Mostrar información del algoritmo de Dijkstra"
-        >
-          <Info className="mr-2 h-4 w-4" />
-          Info Algoritmos
-        </Button>
       </CardFooter>
     </Card>
   );

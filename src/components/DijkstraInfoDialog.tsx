@@ -1,5 +1,9 @@
 'use client';
 
+// This component is no longer used and has been replaced by AlgorithmInfoPanel.tsx
+// It is kept in the project to avoid breaking changes if it were referenced elsewhere,
+// but it is not actively rendered in the application.
+
 import React from 'react';
 import {
   Dialog,
