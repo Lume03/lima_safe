@@ -1,77 +1,54 @@
-
 'use client';
 
-import React, { useEffect, useRef } from 'react';
-import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap, useMapsLibrary, Pin } from '@vis.gl/react-google-maps';
+import React, { useEffect } from 'react';
+import { APIProvider, Map, AdvancedMarker, InfoWindow, Pin, useMap } from '@vis.gl/react-google-maps';
 import type { GraphNode, LatLng } from '@/types';
 import { getDangerColor, getDangerStrokeWeight } from '@/lib/graph-logic';
 
-const PathRenderer: React.FC<{ pathNodes: GraphNode[] }> = ({ pathNodes }) => {
+// New component to handle drawing polylines imperatively
+const PathPolylines: React.FC<{ pathNodes: GraphNode[] }> = ({ pathNodes }) => {
   const map = useMap();
-  const routesLibrary = useMapsLibrary('routes');
-  const drawnPolylinesRef = useRef<google.maps.Polyline[]>([]);
 
   useEffect(() => {
-    const cleanup = () => {
-      drawnPolylinesRef.current.forEach(polyline => polyline.setMap(null));
-      drawnPolylinesRef.current = [];
-    };
-
-    if (!map || !routesLibrary || pathNodes.length < 2) {
-      cleanup();
+    if (!map || pathNodes.length < 2) {
       return;
     }
 
-    const directionsService = new routesLibrary.DirectionsService();
+    const polylines: google.maps.Polyline[] = [];
 
-    const request: google.maps.DirectionsRequest = {
-      origin: { lat: pathNodes[0].lat, lng: pathNodes[0].lon },
-      destination: { lat: pathNodes[pathNodes.length - 1].lat, lng: pathNodes[pathNodes.length - 1].lon },
-      waypoints: pathNodes.slice(1, -1).map(node => ({
-        location: { lat: node.lat, lng: node.lon },
-        stopover: false
-      })),
-      travelMode: google.maps.TravelMode.DRIVING,
+    for (let i = 0; i < pathNodes.length - 1; i++) {
+      const node = pathNodes[i];
+      const nextNode = pathNodes[i + 1];
+      const edge = node.edges.find(e => e.target === nextNode.id);
+
+      if (!edge) continue;
+
+      const color = getDangerColor(edge.peligrosidad);
+      const weight = getDangerStrokeWeight(edge.peligrosidad);
+
+      const polyline = new window.google.maps.Polyline({
+        path: [
+          { lat: node.lat, lng: node.lon },
+          { lat: nextNode.lat, lng: nextNode.lon }
+        ],
+        strokeColor: color,
+        strokeOpacity: 0.9,
+        strokeWeight: weight,
+        zIndex: 1
+      });
+
+      polyline.setMap(map);
+      polylines.push(polyline);
+    }
+    
+    // Cleanup function to remove polylines when component unmounts or path changes
+    return () => {
+      polylines.forEach(p => p.setMap(null));
     };
 
-    directionsService.route(request, (result, status) => {
-      cleanup(); // Clean up before drawing new lines
+  }, [map, pathNodes]);
 
-      if (status === google.maps.DirectionsStatus.OK && result) {
-        // We should have one leg for each segment of our path
-        result.routes[0].legs.forEach((leg, index) => {
-          const fromNode = pathNodes[index];
-          const toNode = pathNodes[index + 1];
-          const edge = fromNode.edges.find(e => e.target === toNode.id);
-          
-          if (!edge) return;
-
-          const color = getDangerColor(edge.peligrosidad);
-          const weight = getDangerStrokeWeight(edge.peligrosidad);
-
-          // The path for this leg is the concatenation of the paths of its steps
-          const pathForLeg = leg.steps.flatMap(step => step.path);
-          
-          const polyline = new google.maps.Polyline({
-            path: pathForLeg,
-            strokeColor: color,
-            strokeOpacity: 0.9,
-            strokeWeight: weight,
-            map: map,
-            zIndex: 1,
-          });
-
-          drawnPolylinesRef.current.push(polyline);
-        });
-      } else {
-        console.error(`Error fetching directions ${result}`);
-      }
-    });
-
-    return cleanup;
-  }, [map, routesLibrary, pathNodes]);
-
-  return null;
+  return null; // This component does not render anything itself
 };
 
 
@@ -132,7 +109,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
 
   return (
-    <APIProvider apiKey={apiKey} libraries={['routes']}>
+    <APIProvider apiKey={apiKey}>
       <Map
         defaultCenter={center}
         defaultZoom={zoom}
@@ -143,7 +120,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
       >
         {markers}
         
-        <PathRenderer pathNodes={pathNodes} />
+        <PathPolylines pathNodes={pathNodes} />
         
         {startPoint && 
           <AdvancedMarker position={startPoint} zIndex={10}>
