@@ -8,78 +8,76 @@ import type { District, PathSegment } from '@/types';
 import { getDangerColor, getDangerStrokeWeight } from '@/lib/graph';
 import { MapPin } from 'lucide-react';
 
-// New component to handle Polyline rendering using Google Maps Directions Service
+// Refactored component to render the entire path with a single Directions API call using waypoints
 const PathRenderer: React.FC<{ pathSegments: PathSegment[] }> = ({ pathSegments }) => {
   const map = useMap(); 
-  const routesLibrary = useMapsLibrary('routes'); // Ensures DirectionsService is available
+  const routesLibrary = useMapsLibrary('routes');
   const directionsServiceRef = React.useRef<google.maps.DirectionsService | null>(null);
-  const drawnPolylinesRef = React.useRef<google.maps.Polyline[]>([]);
+  const directionsRendererRef = React.useRef<google.maps.DirectionsRenderer | null>(null);
 
   React.useEffect(() => {
-    if (!map || !routesLibrary || typeof google === 'undefined' || !google.maps || !google.maps.Polyline || !google.maps.DirectionsService) {
-      console.error('[PathRenderer] Google Maps API or required libraries not available. Path lines cannot be drawn.');
+    if (!map || !routesLibrary || typeof google === 'undefined' || !google.maps) {
+      console.error('[PathRenderer] Google Maps API or required libraries not available.');
       return;
     }
 
     if (!directionsServiceRef.current) {
       directionsServiceRef.current = new google.maps.DirectionsService();
     }
-    const directionsService = directionsServiceRef.current;
-
-    // Clear existing polylines
-    drawnPolylinesRef.current.forEach(polyline => polyline.setMap(null));
-    drawnPolylinesRef.current = [];
-
-    if (pathSegments && pathSegments.length > 0) {
-      pathSegments.forEach((segment, index) => {
-        const request: google.maps.DirectionsRequest = {
-          origin: { lat: segment.from.lat, lng: segment.from.lng },
-          destination: { lat: segment.to.lat, lng: segment.to.lng },
-          travelMode: google.maps.TravelMode.DRIVING, // You can change this (WALKING, BICYCLING)
-        };
-
-        directionsService.route(request, (result, status) => {
-          if (status === google.maps.DirectionsStatus.OK && result && result.routes && result.routes.length > 0) {
-            try {
-              const routePath = result.routes[0].overview_path;
-              const polylineInstance = new google.maps.Polyline({
-                path: routePath,
-                strokeColor: getDangerColor(segment.danger),
-                strokeOpacity: 0.9,
-                strokeWeight: getDangerStrokeWeight(segment.danger),
-                map: map,
-              });
-              drawnPolylinesRef.current.push(polylineInstance);
-            } catch (error) {
-               console.error(`[PathRenderer] Error creating Polyline for segment ${index} from DirectionsResult:`, segment, error);
-            }
-          } else {
-            console.error(`[PathRenderer] Directions request failed for segment ${index} due to ${status}. Falling back to straight line.`);
-            // Fallback to straight line if DirectionsService fails for a segment
-            try {
-              const fallbackPolyline = new google.maps.Polyline({
-                path: [
-                  { lat: segment.from.lat, lng: segment.from.lng },
-                  { lat: segment.to.lat, lng: segment.to.lng },
-                ],
-                strokeColor: getDangerColor(segment.danger),
-                strokeOpacity: 0.7, // Slightly more transparent for fallback
-                strokeWeight: getDangerStrokeWeight(segment.danger) -1, // Slightly thinner for fallback
-                geodesic: true,
-                map: map,
-              });
-              drawnPolylinesRef.current.push(fallbackPolyline);
-            } catch (error) {
-              console.error(`[PathRenderer] Error creating fallback Polyline for segment ${index}:`, segment, error);
-            }
-          }
-        });
+    if (!directionsRendererRef.current) {
+      directionsRendererRef.current = new google.maps.DirectionsRenderer({
+        suppressMarkers: true, // We use our own markers
+        polylineOptions: {
+            strokeColor: getDangerColor(3), // Default color, can be adjusted
+            strokeOpacity: 0.9,
+            strokeWeight: 6,
+        }
       });
     }
+    
+    const directionsRenderer = directionsRendererRef.current;
+    directionsRenderer.setMap(map);
+
+    if (!pathSegments || pathSegments.length === 0) {
+      directionsRenderer.setDirections({routes: []}); // Clear the route from the map
+      return;
+    }
+
+    const directionsService = directionsServiceRef.current;
+    
+    const origin = pathSegments[0].from;
+    const destination = pathSegments[pathSegments.length - 1].to;
+    
+    // Waypoints are all the intermediate points in the path
+    const waypoints: google.maps.DirectionsWaypoint[] = pathSegments.slice(0, -1).map(segment => ({
+      location: { lat: segment.to.lat, lng: segment.to.lng },
+      stopover: false // true if you want a marker for each waypoint, false for just routing through
+    }));
+
+    const request: google.maps.DirectionsRequest = {
+      origin: { lat: origin.lat, lng: origin.lng },
+      destination: { lat: destination.lat, lng: destination.lng },
+      waypoints: waypoints,
+      travelMode: google.maps.TravelMode.DRIVING,
+    };
+
+    directionsService.route(request, (result, status) => {
+      if (status === google.maps.DirectionsStatus.OK && result) {
+        directionsRenderer.setDirections(result);
+        // Here you could potentially color segments differently, but it's more complex
+        // with a single DirectionsRenderer. For now, the whole route has one style.
+      } else {
+        console.error(`[PathRenderer] Directions request failed due to ${status}`);
+        // Clear previous route if the new one fails
+        directionsRenderer.setDirections({routes: []});
+      }
+    });
 
     return () => {
-      drawnPolylinesRef.current.forEach(polyline => polyline.setMap(null));
-      drawnPolylinesRef.current = [];
+      // Clean up renderer when component unmounts or path changes
+      if (directionsRenderer) {
+        directionsRenderer.setMap(null);
+      }
     };
   }, [map, routesLibrary, pathSegments]); 
 
@@ -108,28 +106,19 @@ const MapComponent: React.FC<MapComponentProps> = ({
 }) => {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-  React.useEffect(() => {
-    // console.log('[MapComponent] pathSegments received:', JSON.stringify(pathSegments, null, 2));
-  }, [pathSegments]);
-
   if (!apiKey) {
     return (
       <div className="flex items-center justify-center h-full bg-muted rounded-lg">
         <p className="text-destructive-foreground p-4 bg-destructive rounded-md">
-          La API Key de Google Maps no está configurada. Por favor, establece NEXT_PUBLIC_GOOGLE_MAPS_API_KEY en tu entorno.
+          La API Key de Google Maps no está configurada. Por favor, establece NEXT_PUBLIC_GOOGLE_MAPS_API_KEY en tu archivo .env.local.
         </p>
       </div>
     );
   }
 
   const getMarkerIcon = (district: District) => {
-    if (
-      typeof window !== 'undefined' &&
-      window.google &&
-      window.google.maps &&
-      window.google.maps.SymbolPath &&
-      typeof window.google.maps.SymbolPath.CIRCLE !== 'undefined'
-    ) {
+    // This check ensures google.maps is available before trying to use it.
+    if (typeof window !== 'undefined' && window.google && window.google.maps) {
       return {
         path: window.google.maps.SymbolPath.CIRCLE,
         scale: 8,
@@ -139,12 +128,11 @@ const MapComponent: React.FC<MapComponentProps> = ({
         strokeColor: '#FFFFFF'
       };
     }
-    // Fallback to default marker if SymbolPath is not ready
-    return undefined; 
+    return undefined; // Fallback to default marker if API not ready
   };
 
   return (
-    <APIProvider apiKey={apiKey} libraries={['routes']}> {/* Ensure 'routes' library is loaded here */}
+    <APIProvider apiKey={apiKey} libraries={['routes']}>
       <Map
         defaultCenter={center}
         defaultZoom={zoom}
@@ -181,4 +169,3 @@ const MapComponent: React.FC<MapComponentProps> = ({
 };
 
 export default MapComponent;
-
