@@ -22,6 +22,14 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ pathResult }) => {
       </CardHeader>
       <CardContent className="space-y-4">
         
+        <div className="p-4 bg-primary/10 rounded-md border border-primary/20 text-center">
+            <h4 className="font-semibold text-sm text-primary flex items-center justify-center">
+                <Sigma className="mr-2 h-4 w-4" /> Costo Total Calculado
+            </h4>
+            <p className="font-code text-2xl font-bold text-primary">{pathResult.totalCost.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">(distancia × peso) + (peligro × peso)</p>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="p-3 bg-secondary/50 rounded-md">
             <h4 className="font-semibold text-sm text-muted-foreground flex items-center">
