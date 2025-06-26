@@ -122,7 +122,7 @@ export default function HomePage() {
     <main className="container mx-auto p-4 sm:p-6 min-h-screen bg-background">
       <header className="mb-6 text-center">
         <h1 className="text-3xl sm:text-4xl font-headline font-bold text-primary tracking-tight">
-          Ruta Segura en Lima (Nivel Calle)
+          Ruta Segura en Lima (Nivel San Miguel)
         </h1>
         <p className="text-muted-foreground mt-1 text-sm sm:text-base">
           Demostración de Dijkstra con Grafo Detallado
