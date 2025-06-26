@@ -134,7 +134,12 @@ export const limaData: LimaData = {
     // Callao (5)
     { id: 'c115', from: 'callao', to: 'lima_centro', distance: 11.0, danger: 5 },
     { id: 'c116', from: 'lima_centro', to: 'callao', distance: 11.0, danger: 5 },
-    { id: 'c117', from: 'callao', to: 'magdalena_del_mar', distance: 8.0, danger: 4 },
-    { id: 'c118', from: 'magdalena_del_mar', to: 'callao', distance: 8.0, danger: 4 },
+    // This is the direct but now MORE DANGEROUS path
+    { id: 'c117', from: 'callao', to: 'magdalena_del_mar', distance: 8.0, danger: 5 },
+    { id: 'c118', from: 'magdalena_del_mar', to: 'callao', distance: 8.0, danger: 5 },
+
+    // This is the new SAFER BUT LONGER path
+    { id: 'c200', from: 'callao', to: 'san_isidro', distance: 15.0, danger: 2 },
+    { id: 'c201', from: 'san_isidro', to: 'callao', distance: 15.0, danger: 2 },
   ],
 };
