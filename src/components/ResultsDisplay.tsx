@@ -2,10 +2,8 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import type { PathResult } from '@/types';
-import { MapPinned, AlertTriangle, Sigma, Route } from 'lucide-react';
-import { getDangerColor } from '@/lib/graph';
+import { MapPinned, AlertTriangle, Sigma, Route, Timer, Package, Zap } from 'lucide-react';
 
 interface ResultsDisplayProps {
   pathResult: PathResult;
@@ -13,72 +11,57 @@ interface ResultsDisplayProps {
 
 const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ pathResult }) => {
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg animate-in fade-in-50">
       <CardHeader>
         <CardTitle className="font-headline text-2xl text-primary flex items-center">
-          <MapPinned className="mr-2 h-6 w-6" /> Detalles de la Ruta
+          <MapPinned className="mr-2 h-6 w-6" /> Resultados del Cálculo
         </CardTitle>
+        <CardDescription>
+          Algoritmo: Dijkstra {pathResult.algorithm === 'simple' ? 'Simple' : 'con Heap'}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <h3 className="font-semibold text-lg mb-1 flex items-center">
-            <Route className="mr-2 h-5 w-5 text-muted-foreground"/> Ruta
-          </h3>
-          <div className="flex flex-wrap gap-2 items-center">
-            {pathResult.pathNodes.map((node, index) => (
-              <React.Fragment key={node.id}>
-                <Badge variant="secondary" className="text-sm px-3 py-1">{node.name}</Badge>
-                {index < pathResult.pathNodes.length - 1 && (
-                  <span className="text-muted-foreground font-bold">&rarr;</span>
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-           {pathResult.pathNodes.length === 0 && <p className="text-muted-foreground">Ninguna ruta calculada aún.</p>}
-           {pathResult.pathNodes.length === 1 && <p className="text-muted-foreground">El origen y el destino son los mismos.</p>}
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="p-3 bg-secondary/50 rounded-md">
             <h4 className="font-semibold text-sm text-muted-foreground flex items-center">
               <Route className="mr-1 h-4 w-4"/> Distancia Total
             </h4>
-            <p className="font-code text-xl font-bold">{pathResult.totalDistance.toFixed(2)} km</p>
+            <p className="font-code text-xl font-bold">{(pathResult.totalLength / 1000).toFixed(2)} km</p>
           </div>
           <div className="p-3 bg-secondary/50 rounded-md">
             <h4 className="font-semibold text-sm text-muted-foreground flex items-center">
-              <AlertTriangle className="mr-1 h-4 w-4"/> Puntaje Total de Peligro
+              <AlertTriangle className="mr-1 h-4 w-4"/> Peligro Acumulado
             </h4>
-            <p className="font-code text-xl font-bold">{pathResult.totalDangerScore.toFixed(2)}</p>
-          </div>
-          <div className="p-3 bg-secondary/50 rounded-md">
-            <h4 className="font-semibold text-sm text-muted-foreground flex items-center">
-             <Sigma className="mr-1 h-4 w-4"/> Costo Ponderado
-            </h4>
-            <p className="font-code text-xl font-bold">{pathResult.totalWeightedCost.toFixed(2)}</p>
+            <p className="font-code text-xl font-bold">{pathResult.totalPeligrosidad.toFixed(2)}</p>
           </div>
         </div>
-        
-        {pathResult.segments.length > 0 && (
-          <div>
-            <h3 className="font-semibold text-lg mb-2 mt-4">Segmentos de la Ruta:</h3>
-            <ul className="space-y-2">
-              {pathResult.segments.map((segment, index) => (
-                <li key={index} className="p-3 border rounded-md flex justify-between items-center">
-                  <div>
-                    <span className="font-medium">{segment.from.name}</span> &rarr; <span className="font-medium">{segment.to.name}</span>
-                    <p className="text-xs text-muted-foreground font-code">
-                      Dist: {segment.distance.toFixed(1)}km, Peligro: {segment.danger}, Costo: {segment.weightedCost.toFixed(1)}
-                    </p>
-                  </div>
-                  <Badge style={{ backgroundColor: getDangerColor(segment.danger), color: segment.danger > 2 ? 'white' : 'black' }}>
-                    Peligro: {segment.danger}
-                  </Badge>
-                </li>
-              ))}
-            </ul>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-3 bg-secondary/50 rounded-md">
+            <h4 className="font-semibold text-sm text-muted-foreground flex items-center">
+              <Timer className="mr-1 h-4 w-4"/> Tiempo de Ejecución
+            </h4>
+            <p className="font-code text-lg font-bold">{pathResult.executionTime.toFixed(2)} ms</p>
           </div>
-        )}
+          <div className="p-3 bg-secondary/50 rounded-md">
+            <h4 className="font-semibold text-sm text-muted-foreground flex items-center">
+              {pathResult.algorithm === 'simple' ? <Package className="mr-1 h-4 w-4"/> : <Zap className="mr-1 h-4 w-4"/>} Nodos Visitados
+            </h4>
+            <p className="font-code text-lg font-bold">{pathResult.visitedNodes}</p>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-lg mb-2">Ruta ({pathResult.path.length} nodos)</h3>
+          <p className="text-xs text-muted-foreground">
+             La ruta es la secuencia de intersecciones. Se resalta en el mapa.
+          </p>
+          <div className="text-xs text-muted-foreground mt-2 bg-secondary/30 p-2 rounded-md font-code break-words">
+            {pathResult.path.map(n => n.id).join(' → ')}
+          </div>
+        </div>
+      
       </CardContent>
     </Card>
   );

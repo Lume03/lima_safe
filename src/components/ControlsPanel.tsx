@@ -4,130 +4,111 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
-import type { District } from '@/types';
-import { Route, TrendingUp, ShieldAlert, Info, Zap, Package } from 'lucide-react'; 
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import type { GraphNode } from '@/types';
+import { Route, Info, Zap, Package, MapPin, X, Shield, Goal } from 'lucide-react'; 
 
 interface ControlsPanelProps {
-  districts: District[];
-  origin: string | null;
-  destination: string | null;
-  onOriginChange: (value: string) => void;
-  onDestinationChange: (value: string) => void;
-  alpha: number;
-  beta: number;
-  onWeightChange: (newAlpha: number) => void;
+  startNode: GraphNode | null;
+  endNode: GraphNode | null;
+  weightType: 'length' | 'peligrosidad';
+  onWeightTypeChange: (value: 'length' | 'peligrosidad') => void;
   onCalculatePathSimple: () => void;
   onCalculatePathHeap: () => void;
   isLoading: boolean;
   onShowDijkstraInfo: () => void;
+  onClear: () => void;
 }
 
 const ControlsPanel: React.FC<ControlsPanelProps> = ({
-  districts,
-  origin,
-  destination,
-  onOriginChange,
-  onDestinationChange,
-  alpha,
-  beta,
-  onWeightChange,
+  startNode,
+  endNode,
+  weightType,
+  onWeightTypeChange,
   onCalculatePathSimple,
   onCalculatePathHeap,
   isLoading,
   onShowDijkstraInfo,
+  onClear,
 }) => {
-  const handleSliderChange = (value: number[]) => {
-    onWeightChange(value[0]);
-  };
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle className="font-headline text-2xl text-primary flex items-center">
-          <Route className="mr-2 h-6 w-6" /> Planificador de Ruta
+        <CardTitle className="font-headline text-2xl text-primary flex items-center justify-between">
+          <div className="flex items-center">
+            <Route className="mr-2 h-6 w-6" /> Planificador de Ruta
+          </div>
+          <Button onClick={onClear} variant="ghost" size="icon" className="h-7 w-7">
+            <X className="h-5 w-5"/>
+            <span className="sr-only">Limpiar selección</span>
+          </Button>
         </CardTitle>
-        <CardDescription>Selecciona origen, destino y ajusta las preferencias de la ruta.</CardDescription>
+        <CardDescription>Selecciona puntos en el mapa y elige tus preferencias.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="origin-select">Distrito de Origen</Label>
-          <Select value={origin || ''} onValueChange={onOriginChange}>
-            <SelectTrigger id="origin-select" className="w-full">
-              <SelectValue placeholder="Seleccionar origen" />
-            </SelectTrigger>
-            <SelectContent>
-              {districts.map((d) => (
-                <SelectItem key={d.id} value={d.id}>
-                  {d.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="destination-select">Distrito de Destino</Label>
-          <Select value={destination || ''} onValueChange={onDestinationChange}>
-            <SelectTrigger id="destination-select" className="w-full">
-              <SelectValue placeholder="Seleccionar destino" />
-            </SelectTrigger>
-            <SelectContent>
-              {districts.map((d) => (
-                <SelectItem key={d.id} value={d.id} disabled={d.id === origin}>
-                  {d.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label className="flex items-center text-muted-foreground"><MapPin className="mr-1.5 h-4 w-4 text-green-500" /> Origen</Label>
+            <div className="h-10 p-2 border rounded-md bg-secondary/30 text-sm truncate" title={startNode ? `ID: ${startNode.id}`: 'No seleccionado'}>
+              {startNode ? `ID: ${startNode.id}` : 'No seleccionado'}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="flex items-center text-muted-foreground"><Goal className="mr-1.5 h-4 w-4 text-red-500"/> Destino</Label>
+             <div className="h-10 p-2 border rounded-md bg-secondary/30 text-sm truncate" title={endNode ? `ID: ${endNode.id}`: 'No seleccionado'}>
+              {endNode ? `ID: ${endNode.id}` : 'No seleccionado'}
+            </div>
+          </div>
         </div>
 
         <div className="space-y-3">
-          <div className="flex justify-between items-center mb-1">
-            <Label htmlFor="weight-slider" className="text-base">Preferencia de Ruta</Label>
-          </div>
-          <Slider
-            id="weight-slider"
-            value={[alpha]}
-            max={1}
-            step={0.01}
-            onValueChange={handleSliderChange}
-            className="w-full"
-            aria-label="Deslizador de preferencia de ruta"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground mt-1 px-1">
-            <span className="flex items-center"><TrendingUp className="mr-1 h-3 w-3 text-green-500"/> Más Enfocado en Distancia</span>
-            <span className="flex items-center">Más Enfocado en Seguridad <ShieldAlert className="ml-1 h-3 w-3 text-red-500"/></span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            <div className="p-2 bg-secondary/30 rounded-md text-center">
-              <p className="text-xs text-muted-foreground">Distancia (Alfa)</p>
-              <p className="font-bold font-code text-sm">{alpha.toFixed(2)}</p>
-            </div>
-            <div className="p-2 bg-secondary/30 rounded-md text-center">
-              <p className="text-xs text-muted-foreground">Seguridad (Beta)</p>
-              <p className="font-bold font-code text-sm">{beta.toFixed(2)}</p>
-            </div>
-          </div>
-           <p className="text-xs text-muted-foreground text-center pt-1">Ajusta el deslizador para priorizar menor distancia vs. mayor seguridad. Alfa + Beta = 1.</p>
+            <Label htmlFor="weight-type" className="text-base">Priorizar Ruta Por</Label>
+            <RadioGroup
+                id="weight-type"
+                value={weightType}
+                onValueChange={(value) => onWeightTypeChange(value as 'length' | 'peligrosidad')}
+                className="grid grid-cols-2 gap-4"
+            >
+                <div>
+                    <RadioGroupItem value="length" id="length" className="peer sr-only" />
+                    <Label
+                        htmlFor="length"
+                        className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                    >
+                        <Route className="mb-3 h-6 w-6" />
+                        Distancia
+                    </Label>
+                </div>
+
+                <div>
+                    <RadioGroupItem value="peligrosidad" id="peligrosidad" className="peer sr-only" />
+                    <Label
+                        htmlFor="peligrosidad"
+                        className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                    >
+                        <Shield className="mb-3 h-6 w-6" />
+                        Seguridad
+                    </Label>
+                </div>
+            </RadioGroup>
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-2 pt-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
             <Button 
             onClick={onCalculatePathSimple} 
-            disabled={isLoading || !origin || !destination} 
+            disabled={isLoading || !startNode || !endNode} 
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
             >
-            <Package className="mr-2 h-4 w-4" /> {isLoading ? 'Calculando...' : 'Ruta (O(V²))'}
+            <Package className="mr-2 h-4 w-4" /> {isLoading ? 'Calculando...' : 'Dijkstra Simple'}
             </Button>
             <Button 
             onClick={onCalculatePathHeap} 
-            disabled={isLoading || !origin || !destination} 
+            disabled={isLoading || !startNode || !endNode} 
             className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
             >
-            <Zap className="mr-2 h-4 w-4" /> {isLoading ? 'Calculando...' : 'Ruta (Heap)'}
+            <Zap className="mr-2 h-4 w-4" /> {isLoading ? 'Calculando...' : 'Dijkstra (Heap)'}
             </Button>
         </div>
         <Button 

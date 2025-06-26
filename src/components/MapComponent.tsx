@@ -1,189 +1,158 @@
-
-// Ensure you have a .env.local file with NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="YOUR_API_KEY"
 'use client';
 
-import React from 'react';
-import { APIProvider, Map, Marker, InfoWindow, useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
-import type { District, PathSegment } from '@/types'; 
-import { getDangerColor, getDangerStrokeWeight } from '@/lib/graph';
+import React, { useState, useEffect, useRef } from 'react';
+import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap, useMapsLibrary, Pin } from '@vis.gl/react-google-maps';
+import type { GraphNode, LatLng } from '@/types'; 
+import { getDangerColor, getDangerStrokeWeight } from '@/lib/graph-logic';
 
-// This component renders the calculated path by drawing individual, colored polylines for each segment.
-// It makes a single efficient Directions API call to get the geometry for the whole route.
-const PathRenderer: React.FC<{ pathSegments: PathSegment[] }> = ({ pathSegments }) => {
+const PathRenderer: React.FC<{ pathNodes: GraphNode[] }> = ({ pathNodes }) => {
   const map = useMap();
-  const routesLibrary = useMapsLibrary('routes');
-  const directionsServiceRef = React.useRef<google.maps.DirectionsService | null>(null);
-  // This ref will hold the polylines we draw on the map so we can clean them up
-  const drawnPolylinesRef = React.useRef<google.maps.Polyline[]>([]);
+  const drawnPolylinesRef = useRef<google.maps.Polyline[]>([]);
 
-  React.useEffect(() => {
-    // Exit if the map, routes library, or path segments aren't ready
-    if (!map || !routesLibrary || !pathSegments) {
-      return;
-    }
-
-    // Initialize the directions service once
-    if (!directionsServiceRef.current) {
-      directionsServiceRef.current = new routesLibrary.DirectionsService();
-    }
-
-    // --- Cleanup function to remove old polylines from the map ---
+  useEffect(() => {
     const cleanup = () => {
       drawnPolylinesRef.current.forEach(polyline => polyline.setMap(null));
       drawnPolylinesRef.current = [];
     };
 
-    // If there are no segments, just clean up any old route and exit
-    if (pathSegments.length === 0) {
+    if (!map || pathNodes.length < 2) {
       cleanup();
       return;
     }
 
-    const directionsService = directionsServiceRef.current;
+    cleanup(); // Clear previous path
 
-    // --- Build the request for the Directions API ---
-    // We use waypoints to get a route that passes through all intermediate districts.
-    const origin = pathSegments[0].from;
-    const destination = pathSegments[pathSegments.length - 1].to;
+    for (let i = 0; i < pathNodes.length - 1; i++) {
+      const fromNode = pathNodes[i];
+      const toNode = pathNodes[i + 1];
+      
+      const edge = fromNode.edges.find(e => e.target === toNode.id);
+      if (!edge) continue;
+
+      const pathCoordinates = [
+        { lat: fromNode.lat, lng: fromNode.lon },
+        { lat: toNode.lat, lng: toNode.lon }
+      ];
+
+      const polyline = new google.maps.Polyline({
+        path: pathCoordinates,
+        strokeColor: getDangerColor(edge.peligrosidad),
+        strokeOpacity: 0.9,
+        strokeWeight: getDangerStrokeWeight(edge.peligrosidad),
+        map: map,
+      });
+
+      drawnPolylinesRef.current.push(polyline);
+    }
     
-    // Waypoints are all the intermediate points in the path.
-    // 'stopover: true' is crucial to ensure the API returns a separate "leg" for each segment.
-    const waypoints: google.maps.DirectionsWaypoint[] = pathSegments.slice(0, -1).map(segment => ({
-      location: { lat: segment.to.lat, lng: segment.to.lng },
-      stopover: true 
-    }));
-
-    const request: google.maps.DirectionsRequest = {
-      origin: { lat: origin.lat, lng: origin.lng },
-      destination: { lat: destination.lat, lng: destination.lng },
-      waypoints: waypoints,
-      travelMode: google.maps.TravelMode.DRIVING,
-    };
-
-    // --- Make the API call ---
-    directionsService.route(request, (result, status) => {
-      // Clear any previous route before drawing a new one
-      cleanup();
-
-      if (status === google.maps.DirectionsStatus.OK && result) {
-        const route = result.routes[0];
-        if (!route) return;
-
-        // The result contains 'legs', where each leg corresponds to one of our pathSegments.
-        route.legs.forEach((leg, index) => {
-          const segment = pathSegments[index];
-          if (!segment) return; // Should not happen if API returns correct number of legs
-
-          // Get styling for this specific segment based on its danger level
-          const color = getDangerColor(segment.danger);
-          const weight = getDangerStrokeWeight(segment.danger);
-          
-          // A leg's path is composed of multiple 'steps'. We combine them into a single path.
-          const pathForLeg = leg.steps.flatMap(step => step.path);
-
-          // Create and draw a new Polyline for this leg
-          const polyline = new google.maps.Polyline({
-            path: pathForLeg,
-            strokeColor: color,
-            strokeOpacity: 0.9,
-            strokeWeight: weight,
-            map: map,
-          });
-
-          // Store the polyline in our ref so we can clean it up on the next run
-          drawnPolylinesRef.current.push(polyline);
-        });
-
-      } else {
-        console.error(`[PathRenderer] Directions request failed due to ${status}`);
-      }
-    });
-
-    // Return the cleanup function to be called by React when the component unmounts or props change
     return cleanup;
 
-  }, [map, routesLibrary, pathSegments]); // Re-run effect if map, library, or path changes
+  }, [map, pathNodes]);
 
-  return null; // This component only renders programmatically on the map, not with JSX
+  return null;
 };
 
 
 interface MapComponentProps {
-  districts: District[];
-  selectedOrigin: District | null;
-  selectedDestination: District | null;
-  pathSegments: PathSegment[];
-  onDistrictClick: (districtId: string) => void;
+  nodes: GraphNode[];
+  startPoint: LatLng | null;
+  endPoint: LatLng | null;
+  startNode: GraphNode | null;
+  endNode: GraphNode | null;
+  pathNodes: GraphNode[];
+  onMapClick: (coords: LatLng) => void;
   center?: { lat: number; lng: number };
   zoom?: number;
 }
 
 const MapComponent: React.FC<MapComponentProps> = ({
-  districts,
-  selectedOrigin,
-  selectedDestination,
-  pathSegments,
-  onDistrictClick,
-  center = { lat: -12.088, lng: -77.026 }, 
-  zoom = 11,
+  nodes,
+  startPoint,
+  endPoint,
+  startNode,
+  endNode,
+  pathNodes,
+  onMapClick,
+  center = { lat: -12.123, lng: -77.03 }, // Centered on Miraflores
+  zoom = 15,
 }) => {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const [clickedNode, setClickedNode] = useState<GraphNode | null>(null);
 
   if (!apiKey) {
     return (
       <div className="flex items-center justify-center h-full bg-muted rounded-lg">
         <p className="text-destructive-foreground p-4 bg-destructive rounded-md">
-          La API Key de Google Maps no está configurada. Por favor, establece NEXT_PUBLIC_GOOGLE_MAPS_API_KEY en tu archivo .env.local.
+          La API Key de Google Maps no está configurada.
         </p>
       </div>
     );
   }
 
-  const getMarkerIcon = (district: District) => {
-    // This check ensures google.maps is available before trying to use it.
-    if (typeof window !== 'undefined' && window.google && window.google.maps) {
-      return {
-        path: 0, // 0 is the value for google.maps.SymbolPath.CIRCLE
-        scale: 8,
-        fillColor: selectedOrigin?.id === district.id ? '#FF9800' : (selectedDestination?.id === district.id ? '#3F51B5' : '#777777'),
-        fillOpacity: 1,
-        strokeWeight: 2,
-        strokeColor: '#FFFFFF'
-      };
-    }
-    return undefined; // Fallback to default marker if API not ready
-  };
+  // Memoize markers to avoid re-rendering all of them on every state change
+  const markers = React.useMemo(() => {
+    // Only show nodes in the path or the selected start/end nodes
+    const nodesInPathIds = new Set(pathNodes.map(n => n.id));
+    const relevantNodes = nodes.filter(node => 
+        nodesInPathIds.has(node.id) || 
+        node.id === startNode?.id || 
+        node.id === endNode?.id
+    );
+
+    // If no path or selection, show a subset of nodes to avoid clutter
+    const nodesToRender = relevantNodes.length > 0 ? relevantNodes : nodes.slice(0, 200);
+
+    return nodesToRender.map(node => (
+      <AdvancedMarker
+        key={node.id}
+        position={{ lat: node.lat, lng: node.lon }}
+        onClick={() => onMapClick({ lat: node.lat, lng: node.lon })}
+        title={`Node ${node.id}`}
+      >
+        <Pin 
+            background={'#F5F5F5'}
+            borderColor={'#606060'}
+            glyphColor={'#303030'}
+            scale={0.5} 
+        />
+      </AdvancedMarker>
+    ));
+  }, [nodes, pathNodes, startNode, endNode, onMapClick]);
+
 
   return (
-    <APIProvider apiKey={apiKey} libraries={['routes']}>
+    <APIProvider apiKey={apiKey}>
       <Map
         defaultCenter={center}
         defaultZoom={zoom}
         gestureHandling={'greedy'}
         disableDefaultUI={true}
-        mapId="limaSafeRouteMap"
-        className="w-full h-[calc(100vh-10rem)] lg:h-full rounded-lg shadow-lg"
+        mapId="limaSafeRouteMapDetailed"
+        onClick={(e) => e.detail.latLng && onMapClick(e.detail.latLng)}
       >
-        {districts.map((district) => (
-          <Marker
-            key={district.id}
-            position={{ lat: district.lat, lng: district.lng }}
-            onClick={() => onDistrictClick(district.id)}
-            title={district.name}
-            icon={getMarkerIcon(district)}
-          />
-        ))}
-
-        <PathRenderer pathSegments={pathSegments} />
-
-        {selectedOrigin && (
-          <InfoWindow position={{ lat: selectedOrigin.lat, lng: selectedOrigin.lng }}>
-            <div className="p-1 font-medium">Origen: {selectedOrigin.name}</div>
+        {markers}
+        
+        <PathRenderer pathNodes={pathNodes} />
+        
+        {startPoint && 
+          <AdvancedMarker position={startPoint}>
+             <Pin background={'#22C55E'} borderColor={'#16A34A'} glyphColor={'#FFFFFF'}/>
+          </AdvancedMarker>
+        }
+        {endPoint && 
+          <AdvancedMarker position={endPoint}>
+             <Pin background={'#EF4444'} borderColor={'#DC2626'} glyphColor={'#FFFFFF'}/>
+          </AdvancedMarker>
+        }
+        
+        {startNode && (
+          <InfoWindow position={{ lat: startNode.lat, lng: startNode.lon }}>
+            <div className="p-1 font-medium">Origen (Nodo {startNode.id})</div>
           </InfoWindow>
         )}
-        {selectedDestination && (
-          <InfoWindow position={{ lat: selectedDestination.lat, lng: selectedDestination.lng }}>
-            <div className="p-1 font-medium">Destino: {selectedDestination.name}</div>
+        {endNode && (
+          <InfoWindow position={{ lat: endNode.lat, lng: endNode.lon }}>
+             <div className="p-1 font-medium">Destino (Nodo {endNode.id})</div>
           </InfoWindow>
         )}
       </Map>

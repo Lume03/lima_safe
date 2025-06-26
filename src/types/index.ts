@@ -1,42 +1,33 @@
-
-export interface District {
-  id: string;
-  name: string;
+export interface LatLng {
   lat: number;
   lng: number;
-  danger: number; // 1-5 (1 = safest, 5 = most dangerous)
 }
 
-export interface Connection {
-  id:string;
-  from: string;
-  to: string;
-  distance: number; // in kilometers
-  danger: number; // 1-5 (1 = safest, 5 = most dangerous)
+export interface GraphNode {
+  id: string;
+  lat: number;
+  lon: number;
+  edges: GraphEdge[]; // For easier access to edge data
 }
 
-export interface PathSegment {
-  from: District;
-  to: District;
-  distance: number;
-  danger: number;
-  weightedCost: number;
+export interface GraphEdge {
+  source: string;
+  target: string;
+  length: number; // in meters
+  peligrosidad: number; // 1-5 (1 = safest, 5 = most dangerous)
+}
+
+export interface GraphData {
+  nodes: { id: string; lat: number; lon: number }[];
+  edges: GraphEdge[];
 }
 
 export interface PathResult {
-  pathNodes: District[];
-  segments: PathSegment[];
-  totalDistance: number;
-  totalDangerScore: number; // Sum of danger values of edges in the path
-  totalWeightedCost: number;
+  path: GraphNode[];
+  totalLength: number;
+  totalPeligrosidad: number;
+  totalCost: number;
+  visitedNodes: number;
+  algorithm: 'simple' | 'heap';
+  executionTime: number;
 }
-
-export interface LimaData {
-  districts: District[];
-  connections: Connection[];
-}
-
-// Removed VisGlPolylineProps re-export as MapComponent now uses a local simplified type.
-// If other components were using VisGlPolylineProps from here, this might need to be preserved,
-// but for now, MapComponent is the primary consumer of Polyline-related types.
-// export type { PolylineProps as VisGlPolylineProps } from '@vis.gl/react-google-maps';

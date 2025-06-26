@@ -1,215 +1,181 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 import MapComponent from '@/components/MapComponent';
 import ControlsPanel from '@/components/ControlsPanel';
 import ResultsDisplay from '@/components/ResultsDisplay';
-import DijkstraInfoDialog from '@/components/DijkstraInfoDialog'; 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
+import DijkstraInfoDialog from '@/components/DijkstraInfoDialog';
 
-import { limaData } from '@/data/lima-data';
-import { dijkstraSimple, dijkstraWithHeap } from '@/lib/graph';
-import type { District, Connection, PathResult } from '@/types';
-
+import { Graph, dijkstra, dijkstraHeap } from '@/lib/graph-logic';
+import type { GraphNode, PathResult, LatLng, GraphData } from '@/types';
 
 export default function HomePage() {
   const { toast } = useToast();
-  const [districtsList, setDistrictsList] = useState<District[]>([]);
-  const [connectionsList, setConnectionsList] = useState<Connection[]>([]);
-
-  const [selectedOriginId, setSelectedOriginId] = useState<string | null>(null);
-  const [selectedDestinationId, setSelectedDestinationId] = useState<string | null>(null);
   
-  const [alpha, setAlpha] = useState(0.6); 
-  const [beta, setBeta] = useState(0.4);   
+  const [graphData, setGraphData] = useState<GraphData | null>(null);
+  const graph = useMemo(() => graphData ? new Graph(graphData) : null, [graphData]);
 
-  const [pathResult, setPathResult] = useState<PathResult | null>(null);
+  const [startPoint, setStartPoint] = useState<LatLng | null>(null);
+  const [endPoint, setEndPoint] = useState<LatLng | null>(null);
+  const [startNode, setStartNode] = useState<GraphNode | null>(null);
+  const [endNode, setEndNode] = useState<GraphNode | null>(null);
+  
   const [isCalculatingPath, setIsCalculatingPath] = useState(false);
-  
-  const [isSelectingOrigin, setIsSelectingOrigin] = useState(true);
+  const [pathResult, setPathResult] = useState<PathResult | null>(null);
 
-  const [dijkstraSimpleTime, setDijkstraSimpleTime] = useState<number | null>(null);
-  const [dijkstraHeapTime, setDijkstraHeapTime] = useState<number | null>(null);
-  const [lastAlgorithmUsed, setLastAlgorithmUsed] = useState<'simple' | 'heap' | null>(null);
+  const [weightType, setWeightType] = useState<'length' | 'peligrosidad'>('length');
+  
+  const [isSelectingStart, setIsSelectingStart] = useState(true);
   const [isDijkstraInfoDialogOpen, setIsDijkstraInfoDialogOpen] = useState(false);
 
 
   useEffect(() => {
-    setDistrictsList(limaData.districts);
-    setConnectionsList(limaData.connections);
-  }, []);
-
-  const handleWeightChange = (newAlpha: number) => {
-    const clampedAlpha = Math.max(0, Math.min(1, parseFloat(newAlpha.toFixed(2))));
-    setAlpha(clampedAlpha);
-    setBeta(parseFloat((1 - clampedAlpha).toFixed(2)));
-  };
-
-  const calculatePath = useCallback(async (algorithmType: 'simple' | 'heap') => {
-    if (!selectedOriginId || !selectedDestinationId) {
-      toast({ title: "Selección Incompleta", description: "Por favor, selecciona los distritos de origen y destino.", variant: "destructive" });
-      return;
-    }
-    
-    // --- REFERENTIAL TIME CALCULATION SETUP ---
-    const V = districtsList.length;
-    const E = connectionsList.length;
-    // Scale factors to make times look like plausible milliseconds and emphasize the complexity difference.
-    const SCALE_FACTOR_SIMPLE = 0.005;
-    const SCALE_FACTOR_HEAP = 0.02;
-
-    if (selectedOriginId === selectedDestinationId) {
-       const originNode = districtsList.find(d => d.id === selectedOriginId);
-       if (originNode) {
-        setPathResult({
-          pathNodes: [originNode],
-          segments: [],
-          totalDistance: 0,
-          totalDangerScore: 0,
-          totalWeightedCost: 0,
-        });
+    async function loadGraphData() {
+      try {
+        const response = await fetch('/lima-graph.json');
+        if (!response.ok) {
+          throw new Error('Failed to load graph data');
+        }
+        const data: GraphData = await response.json();
+        setGraphData(data);
+      } catch (error) {
+        console.error("Error loading graph data:", error);
+        toast({ title: "Error", description: "No se pudieron cargar los datos del mapa.", variant: "destructive" });
       }
-      // For same origin/destination, time is effectively 0.
-      setDijkstraSimpleTime(0);
-      setDijkstraHeapTime(0);
-      setLastAlgorithmUsed(algorithmType);
-      toast({ title: "Ruta Calculada", description: "El origen y el destino son el mismo." });
+    }
+    loadGraphData();
+  }, [toast]);
+
+  const handleMapClick = useCallback((coords: LatLng) => {
+    if (!graph) return;
+
+    const nearestNode = graph.findNearestNode(coords.lat, coords.lng);
+    const pointName = isSelectingStart ? 'Origen' : 'Destino';
+
+    if (isSelectingStart) {
+      setStartPoint(coords);
+      setStartNode(nearestNode);
+      if (endNode && nearestNode.id === endNode.id) {
+        setEndPoint(null);
+        setEndNode(null);
+      }
+      setIsSelectingStart(false);
+    } else {
+      if (startNode && nearestNode.id === startNode.id) {
+         toast({ title: "Selección Inválida", description: "El destino no puede ser el mismo que el origen.", variant: "destructive" });
+         return;
+      }
+      setEndPoint(coords);
+      setEndNode(nearestNode);
+      setIsSelectingStart(true); 
+    }
+    toast({ title: `${pointName} Seleccionado`, description: `Intersección ID: ${nearestNode.id} establecida.`});
+  }, [graph, isSelectingStart, startNode, endNode, toast]);
+
+  const calculatePath = useCallback(async (algorithm: 'simple' | 'heap') => {
+    if (!graph || !startNode || !endNode) {
+      toast({ title: "Selección Incompleta", description: "Por favor, selecciona un origen y destino en el mapa.", variant: "destructive" });
       return;
     }
 
     setIsCalculatingPath(true);
-    setPathResult(null); 
-    
-    try {
-      // Simulate a small delay to ensure UI updates before potentially blocking calculation
-      await new Promise(resolve => setTimeout(resolve, 50)); 
-      
-      let result: PathResult | null = null;
-      if (algorithmType === 'simple') {
-        result = dijkstraSimple(districtsList, connectionsList, selectedOriginId, selectedDestinationId, alpha, beta);
-      } else {
-        result = dijkstraWithHeap(districtsList, connectionsList, selectedOriginId, selectedDestinationId, alpha, beta);
-      }
-      
-      // --- USE SIMULATED TIMES INSTEAD OF REAL-TIME MEASUREMENT ---
-      const simulatedSimpleTime = SCALE_FACTOR_SIMPLE * V * V;
-      // Add a small base time to heap to simulate overhead on small graphs
-      const simulatedHeapTime = 0.5 + SCALE_FACTOR_HEAP * E * Math.log(V);
+    setPathResult(null);
 
-      setDijkstraSimpleTime(simulatedSimpleTime);
-      setDijkstraHeapTime(simulatedHeapTime);
-      setLastAlgorithmUsed(algorithmType);
-      
-      if (result && result.pathNodes.length > 0) {
-        setPathResult(result);
-        toast({ title: "Ruta Calculada", description: `Ruta encontrada exitosamente usando Dijkstra ${algorithmType === 'simple' ? 'Simple (O(V²))' : 'con Heap (O(E log V))'}.` });
-      } else {
-        toast({ title: "Ruta No Encontrada", description: "No se pudo encontrar una ruta entre los distritos seleccionados.", variant: "destructive" });
-        setPathResult(null); 
-      }
-    } catch (error) {
-      console.error("Error calculating path:", error);
-      toast({ title: "Error de Cálculo", description: "Ocurrió un error al calcular la ruta.", variant: "destructive" });
-      setPathResult(null);
-      // Reset times on error too
-      setDijkstraSimpleTime(null); 
-      setDijkstraHeapTime(null);
-    } finally {
-      setIsCalculatingPath(false);
-    }
-  }, [selectedOriginId, selectedDestinationId, alpha, beta, districtsList, connectionsList, toast]);
+    // Use setTimeout to allow UI to update before blocking thread
+    setTimeout(() => {
+      try {
+        const startTime = performance.now();
+        const result = algorithm === 'simple' 
+          ? dijkstra(graph, startNode.id, endNode.id, weightType)
+          : dijkstraHeap(graph, startNode.id, endNode.id, weightType);
+        const endTime = performance.now();
 
-
-  const handleMapDistrictClick = (districtId: string) => {
-    const districtName = districtsList.find(d => d.id === districtId)?.name || 'Distrito Desconocido';
-    if (isSelectingOrigin) {
-      setSelectedOriginId(districtId);
-      toast({ title: "Origen Seleccionado", description: `${districtName} establecido como origen.`});
-      if (districtId === selectedDestinationId) { 
-        setSelectedDestinationId(null); 
+        if (result && result.path.length > 0) {
+          setPathResult({ ...result, executionTime: endTime - startTime, algorithm });
+          toast({ title: "Ruta Calculada", description: `Ruta encontrada exitosamente con Dijkstra ${algorithm === 'simple' ? 'Simple' : 'con Heap'}.` });
+        } else {
+          setPathResult(null);
+          toast({ title: "Ruta No Encontrada", description: "No se pudo encontrar una ruta entre los puntos seleccionados.", variant: "destructive" });
+        }
+      } catch (error) {
+        console.error("Error calculating path:", error);
+        setPathResult(null);
+        toast({ title: "Error de Cálculo", description: "Ocurrió un error al calcular la ruta.", variant: "destructive" });
+      } finally {
+        setIsCalculatingPath(false);
       }
-      setIsSelectingOrigin(false); // Always switch to destination selection after origin
-    } else { 
-      if (districtId === selectedOriginId) { // If re-clicking origin, do nothing or allow re-selection? For now, treat as new destination
-        // toast({ title: "Selección Inválida", description: "El destino no puede ser el mismo que el origen.", variant: "destructive"});
-        // return; 
-         setSelectedDestinationId(districtId); // This makes origin and dest same, path calc will handle.
-         toast({ title: "Destino Seleccionado", description: `${districtName} establecido como destino.`});
+    }, 50);
+  }, [graph, startNode, endNode, weightType, toast]);
 
-      } else {
-        setSelectedDestinationId(districtId);
-        toast({ title: "Destino Seleccionado", description: `${districtName} establecido como destino.`});
-      }
-      setIsSelectingOrigin(true); // Switch back to origin selection
-    }
+  const clearSelection = () => {
+    setStartPoint(null);
+    setStartNode(null);
+    setEndPoint(null);
+    setEndNode(null);
+    setPathResult(null);
+    setIsSelectingStart(true);
+    toast({ title: "Selección Limpiada", description: "Puedes seleccionar un nuevo origen." });
   };
   
-  const handleOriginSelectChange = (value: string) => {
-    setSelectedOriginId(value);
-    if (value === selectedDestinationId) setSelectedDestinationId(null);
-  };
-
-  const handleDestinationSelectChange = (value: string) => {
-    setSelectedDestinationId(value);
-  };
-
-  const handleToggleDijkstraInfoDialog = () => {
-    setIsDijkstraInfoDialogOpen(prev => !prev);
-  };
-
-  const selectedOriginDistrict = districtsList.find(d => d.id === selectedOriginId) || null;
-  const selectedDestinationDistrict = districtsList.find(d => d.id === selectedDestinationId) || null;
-
+  if (!graphData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center space-y-2">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-muted-foreground">Cargando modelo de mapa...</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <main className="container mx-auto p-4 sm:p-6 min-h-screen bg-background">
       <header className="mb-6 text-center">
         <h1 className="text-3xl sm:text-4xl font-headline font-bold text-primary tracking-tight">
-          Ruta Segura en Lima
+          Ruta Segura en Lima (Nivel Calle)
         </h1>
         <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-          ADA Grupo 5
+          Demostración de Dijkstra con Grafo Detallado
         </p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 flex flex-col space-y-6">
           <ControlsPanel
-            districts={districtsList}
-            origin={selectedOriginId}
-            destination={selectedDestinationId}
-            onOriginChange={handleOriginSelectChange}
-            onDestinationChange={handleDestinationSelectChange}
-            alpha={alpha}
-            beta={beta}
-            onWeightChange={handleWeightChange}
+            startNode={startNode}
+            endNode={endNode}
+            weightType={weightType}
+            onWeightTypeChange={setWeightType}
             onCalculatePathSimple={() => calculatePath('simple')}
             onCalculatePathHeap={() => calculatePath('heap')}
             isLoading={isCalculatingPath}
-            onShowDijkstraInfo={handleToggleDijkstraInfoDialog}
+            onShowDijkstraInfo={() => setIsDijkstraInfoDialogOpen(true)}
+            onClear={clearSelection}
           />
-           {pathResult && (
-            <ResultsDisplay 
-              pathResult={pathResult} 
-            />
-          )}
-          {!pathResult && !isCalculatingPath && (
-             <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-headline">Información de la Ruta</CardTitle>
-                <CardDescription>Los detalles de la ruta calculada aparecerán aquí.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Por favor, selecciona un origen y destino, ajusta los pesos si lo deseas, y luego haz clic en "Calcular Ruta".</p>
-              </CardContent>
-            </Card>
-          )}
           {isCalculatingPath && (
             <Card className="shadow-lg">
               <CardContent className="p-6 flex flex-col items-center justify-center space-y-2 min-h-[150px]">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-muted-foreground">Calculando ruta óptima...</p>
+              </CardContent>
+            </Card>
+          )}
+          {pathResult ? (
+            <ResultsDisplay pathResult={pathResult} />
+          ) : !isCalculatingPath && (
+             <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="font-headline">Información de la Ruta</CardTitle>
+                <CardDescription>Los detalles de la ruta aparecerán aquí.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Haz clic en el mapa para seleccionar un <span className="font-semibold text-primary">{isSelectingStart ? 'origen' : 'destino'}</span>.
+                </p>
               </CardContent>
             </Card>
           )}
@@ -220,31 +186,30 @@ export default function HomePage() {
             <CardHeader className="pb-2">
                 <CardTitle className="font-headline text-xl">Mapa Interactivo</CardTitle>
                 <CardDescription>
-                  Haz clic en el mapa para seleccionar {isSelectingOrigin ? 'origen' : 'destino'}.
-                  Selección actual: <span className="font-semibold text-primary">{isSelectingOrigin ? 'Origen' : 'Destino'}</span>.
+                  Haz clic para seleccionar {isSelectingStart ? 'origen' : 'destino'}.
+                  Estado: <span className="font-semibold text-primary">{isSelectingStart ? 'Seleccionando Origen' : 'Seleccionando Destino'}</span>.
                 </CardDescription>
             </CardHeader>
             <CardContent className="h-[calc(100%-4rem)] p-0">
-              <MapComponent
-                districts={districtsList}
-                selectedOrigin={selectedOriginDistrict}
-                selectedDestination={selectedDestinationDistrict}
-                pathSegments={pathResult?.segments || []}
-                onDistrictClick={handleMapDistrictClick}
-              />
+               <MapComponent
+                  nodes={graphData.nodes}
+                  startPoint={startPoint}
+                  endPoint={endPoint}
+                  startNode={startNode}
+                  endNode={endNode}
+                  pathNodes={pathResult?.path || []}
+                  onMapClick={handleMapClick}
+                />
             </CardContent>
           </Card>
         </div>
       </div>
       <DijkstraInfoDialog
         isOpen={isDijkstraInfoDialogOpen}
-        onClose={handleToggleDijkstraInfoDialog}
-        simpleTime={dijkstraSimpleTime}
-        heapTime={dijkstraHeapTime}
-        lastAlgorithmUsed={lastAlgorithmUsed}
-        numDistricts={districtsList.length}
-        numConnections={connectionsList.length}
-        isSameOriginDest={selectedOriginId !== null && selectedOriginId === selectedDestinationId}
+        onClose={() => setIsDijkstraInfoDialogOpen(false)}
+        lastResult={pathResult}
+        numNodes={graphData.nodes.length}
+        numEdges={graphData.edges.length}
       />
     </main>
   );
