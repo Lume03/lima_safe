@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,12 +12,13 @@ import DijkstraInfoDialog from '@/components/DijkstraInfoDialog';
 
 import { Graph, dijkstra, dijkstraHeap } from '@/lib/graph-logic';
 import type { GraphNode, PathResult, LatLng, GraphData } from '@/types';
+import graphDataJson from '@/data/lima-graph.json';
 
 export default function HomePage() {
   const { toast } = useToast();
   
-  const [graphData, setGraphData] = useState<GraphData | null>(null);
-  const graph = useMemo(() => graphData ? new Graph(graphData) : null, [graphData]);
+  const [graphData] = useState<GraphData>(graphDataJson as GraphData);
+  const graph = useMemo(() => new Graph(graphData), [graphData]);
 
   const [startPoint, setStartPoint] = useState<LatLng | null>(null);
   const [endPoint, setEndPoint] = useState<LatLng | null>(null);
@@ -34,23 +35,6 @@ export default function HomePage() {
   const [isSelectingStart, setIsSelectingStart] = useState(true);
   const [isDijkstraInfoDialogOpen, setIsDijkstraInfoDialogOpen] = useState(false);
 
-
-  useEffect(() => {
-    async function loadGraphData() {
-      try {
-        const response = await fetch('/lima-graph.json');
-        if (!response.ok) {
-          throw new Error('Failed to load graph data');
-        }
-        const data: GraphData = await response.json();
-        setGraphData(data);
-      } catch (error) {
-        console.error("Error loading graph data:", error);
-        toast({ title: "Error", description: "No se pudieron cargar los datos del mapa.", variant: "destructive" });
-      }
-    }
-    loadGraphData();
-  }, [toast]);
 
   const handleMapClick = useCallback((coords: LatLng) => {
     if (!graph) return;
@@ -124,7 +108,7 @@ export default function HomePage() {
     toast({ title: "Selección Limpiada", description: "Puedes seleccionar un nuevo origen." });
   };
   
-  if (!graphData) {
+  if (!graph) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center space-y-2">
