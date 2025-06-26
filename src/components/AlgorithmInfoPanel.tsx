@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Network, Timer, Shuffle, Package, Zap, Info } from 'lucide-react';
+import { Network, Shuffle, Info } from 'lucide-react';
 import type { PathResult } from '@/types';
 
 interface AlgorithmInfoPanelProps {
@@ -18,7 +18,6 @@ const AlgorithmInfoPanel: React.FC<AlgorithmInfoPanelProps> = ({
 }) => {
   const v = numNodes;
   const e = numEdges;
-  const lastAlgorithmUsed = lastResult?.algorithm;
 
   return (
     <Card className="shadow-lg animate-in fade-in-50">
@@ -42,26 +41,6 @@ const AlgorithmInfoPanel: React.FC<AlgorithmInfoPanelProps> = ({
                 </div>
             </div>
         </div>
-
-        {lastResult && (
-             <div>
-                <h4 className="font-semibold text-primary mb-2 flex items-center"><Timer className="mr-2 h-4 w-4"/>Último Cálculo</h4>
-                <div className={`p-3 border rounded-md bg-secondary/30 ring-2 ${lastAlgorithmUsed === 'simple' ? 'ring-primary' : 'ring-accent'}`}>
-                    <p className="text-xs font-medium text-muted-foreground flex items-center">
-                        {lastAlgorithmUsed === 'simple' ? <Package className="mr-1.5 h-4 w-4"/> : <Zap className="mr-1.5 h-4 w-4"/>}
-                        Dijkstra {lastAlgorithmUsed === 'simple' ? 'Simple' : 'con Heap'}
-                    </p>
-                    <p className="font-bold font-code text-lg">
-                        {lastResult.executionTime.toFixed(2)} ms
-                    </p>
-                    <div className="border-t mt-2 pt-2 text-xs grid grid-cols-3 gap-2">
-                       <p><strong className="font-medium">Nodos:</strong> {lastResult.visitedNodes}</p>
-                       <p><strong className="font-medium">Dist:</strong> {(lastResult.totalLength / 1000).toFixed(2)} km</p>
-                       <p><strong className="font-medium">Peligro:</strong> {lastResult.totalPeligrosidad.toFixed(2)}</p>
-                    </div>
-                </div>
-            </div>
-        )}
         
         <div>
           <h4 className="font-semibold text-primary mb-1 flex items-center"><Shuffle className="mr-2 h-4 w-4" />Consideraciones de Rendimiento</h4>
