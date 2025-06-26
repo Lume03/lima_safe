@@ -72,7 +72,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   endNode,
   pathNodes,
   onMapClick,
-  center = { lat: -12.123, lng: -77.03 }, // Centered on Miraflores
+  center = { lat: -12.087, lng: -77.085 }, // Centered on San Miguel
   zoom = 15,
 }) => {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
