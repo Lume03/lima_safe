@@ -2,59 +2,44 @@
 {
   "nodes": [
     {"id": "1", "lat": -12.1213, "lon": -77.0305, "name": "Óvalo de Miraflores"},
-    {"id": "2", "lat": -12.1189, "lon": -77.0307, "name": "Av. Pardo / Av. Arequipa"},
-    {"id": "3", "lat": -12.1165, "lon": -77.0345, "name": "Av. Pardo / Av. Comandante Espinar"},
-    {"id": "4", "lat": -12.1191, "lon": -77.0335, "name": "Calle Schell / Av. La Paz"},
-    {"id": "5", "lat": -12.1228, "lon": -77.0292, "name": "Parque Kennedy"},
-    {"id": "6", "lat": -12.1252, "lon": -77.0305, "name": "Av. Larco / Calle Schell"},
-    {"id": "7", "lat": -12.1278, "lon": -77.0323, "name": "Av. Larco / Av. Benavides"},
-    {"id": "8", "lat": -12.1305, "lon": -77.0343, "name": "Larcomar"},
-    {"id": "9", "lat": -12.123, "lon": -77.037, "name": "Malecón Balta / Calle Bellavista"},
-    {"id": "10", "lat": -12.120, "lon": -77.039, "name": "Malecón Cisneros / Av. Pardo"},
-    {"id": "11", "lat": -12.125, "lon": -77.041, "name": "Parque del Amor"},
-    {"id": "12", "lat": -12.128, "lon": -77.039, "name": "Malecón Cisneros / Av. Benavides"},
-    {"id": "13", "lat": -12.117, "lon": -77.028, "name": "Av. Arequipa / Av. Angamos"},
-    {"id": "14", "lat": -12.129, "lon": -77.028, "name": "Calle Porta / Calle San Martin"},
-    {"id": "15", "lat": -12.126, "lon": -77.026, "name": "Av. Petit Thouars / Av. Benavides"}
+    {"id": "2", "lat": -12.1252, "lon": -77.0305, "name": "Av. Larco / Calle Schell"},
+    {"id": "3", "lat": -12.1278, "lon": -77.0323, "name": "Av. Larco / Av. Benavides"},
+    {"id": "4", "lat": -12.1305, "lon": -77.0343, "name": "Larcomar"},
+    {"id": "5", "lat": -12.1189, "lon": -77.0307, "name": "Av. Pardo / Av. Arequipa"},
+    {"id": "6", "lat": -12.1165, "lon": -77.0345, "name": "Av. Pardo / Cmdte. Espinar"},
+    {"id": "7", "lat": -12.125, "lon": -77.041, "name": "Parque del Amor"},
+    {"id": "8", "lat": -12.129, "lon": -77.028, "name": "Av. Benavides / P. de la Rep."},
+    {"id": "9", "lat": -12.123, "lon": -77.037, "name": "Malecón Balta / Bellavista"}
   ],
   "edges": [
-    {"source": "1", "target": "2", "length": 300, "peligrosidad": 4.0},
-    {"source": "2", "target": "1", "length": 300, "peligrosidad": 4.0},
-    {"source": "1", "target": "4", "length": 350, "peligrosidad": 3.0},
-    {"source": "4", "target": "1", "length": 350, "peligrosidad": 3.0},
-    {"source": "1", "target": "5", "length": 200, "peligrosidad": 2.0},
-    {"source": "5", "target": "1", "length": 200, "peligrosidad": 2.0},
-    {"source": "2", "target": "3", "length": 450, "peligrosidad": 4.5},
-    {"source": "3", "target": "2", "length": 450, "peligrosidad": 4.5},
-    {"source": "2", "target": "13", "length": 500, "peligrosidad": 5.0},
-    {"source": "13", "target": "2", "length": 500, "peligrosidad": 5.0},
-    {"source": "3", "target": "4", "length": 300, "peligrosidad": 3.5},
-    {"source": "4", "target": "3", "length": 300, "peligrosidad": 3.5},
-    {"source": "3", "target": "10", "length": 550, "peligrosidad": 2.5},
-    {"source": "10", "target": "3", "length": 550, "peligrosidad": 2.5},
-    {"source": "4", "target": "9", "length": 400, "peligrosidad": 2.0},
-    {"source": "9", "target": "4", "length": 400, "peligrosidad": 2.0},
-    {"source": "5", "target": "6", "length": 350, "peligrosidad": 3.0},
-    {"source": "6", "target": "5", "length": 350, "peligrosidad": 3.0},
-    {"source": "6", "target": "7", "length": 300, "peligrosidad": 4.0},
-    {"source": "7", "target": "6", "length": 300, "peligrosidad": 4.0},
-    {"source": "7", "target": "8", "length": 400, "peligrosidad": 3.5},
-    {"source": "8", "target": "7", "length": 400, "peligrosidad": 3.5},
-    {"source": "7", "target": "15", "length": 500, "peligrosidad": 4.8},
-    {"source": "15", "target": "7", "length": 500, "peligrosidad": 4.8},
-    {"source": "8", "target": "12", "length": 500, "peligrosidad": 2.0},
-    {"source": "12", "target": "8", "length": 500, "peligrosidad": 2.0},
-    {"source": "9", "target": "10", "length": 350, "peligrosidad": 1.5},
-    {"source": "10", "target": "9", "length": 350, "peligrosidad": 1.5},
-    {"source": "10", "target": "11", "length": 600, "peligrosidad": 1.0},
-    {"source": "11", "target": "10", "length": 600, "peligrosidad": 1.0},
-    {"source": "11", "target": "12", "length": 300, "peligrosidad": 1.2},
-    {"source": "12", "target": "11", "length": 300, "peligrosidad": 1.2},
-    {"source": "14", "target": "6", "length": 450, "peligrosidad": 2.5},
-    {"source": "6", "target": "14", "length": 450, "peligrosidad": 2.5},
-    {"source": "14", "target": "7", "length": 350, "peligrosidad": 2.8},
-    {"source": "7", "target": "14", "length": 350, "peligrosidad": 2.8},
-    {"source": "14", "target": "15", "length": 250, "peligrosidad": 3.0},
-    {"source": "15", "target": "14", "length": 250, "peligrosidad": 3.0}
+    {"source": "1", "target": "2", "length": 450, "peligrosidad": 4.0},
+    {"source": "2", "target": "1", "length": 450, "peligrosidad": 4.0},
+
+    {"source": "1", "target": "5", "length": 300, "peligrosidad": 3.5},
+    {"source": "5", "target": "1", "length": 300, "peligrosidad": 3.5},
+
+    {"source": "2", "target": "3", "length": 350, "peligrosidad": 4.2},
+    {"source": "3", "target": "2", "length": 350, "peligrosidad": 4.2},
+
+    {"source": "3", "target": "4", "length": 400, "peligrosidad": 3.0},
+    {"source": "4", "target": "3", "length": 400, "peligrosidad": 3.0},
+
+    {"source": "5", "target": "6", "length": 500, "peligrosidad": 4.5},
+    {"source": "6", "target": "5", "length": 500, "peligrosidad": 4.5},
+
+    {"source": "3", "target": "8", "length": 550, "peligrosidad": 4.8},
+    {"source": "8", "target": "3", "length": 550, "peligrosidad": 4.8},
+
+    {"source": "6", "target": "9", "length": 600, "peligrosidad": 2.5},
+    {"source": "9", "target": "6", "length": 600, "peligrosidad": 2.5},
+
+    {"source": "9", "target": "7", "length": 500, "peligrosidad": 1.5},
+    {"source": "7", "target": "9", "length": 500, "peligrosidad": 1.5},
+
+    {"source": "7", "target": "4", "length": 650, "peligrosidad": 1.8},
+    {"source": "4", "target": "7", "length": 650, "peligrosidad": 1.8},
+
+    {"source": "2", "target": "8", "length": 300, "peligrosidad": 2.8},
+    {"source": "8", "target": "2", "length": 300, "peligrosidad": 2.8}
   ]
 }
