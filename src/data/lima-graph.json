@@ -1,45 +1,33 @@
 
 {
   "nodes": [
-    {"id": "1", "lat": -12.1213, "lon": -77.0305, "name": "Óvalo de Miraflores"},
-    {"id": "2", "lat": -12.1252, "lon": -77.0305, "name": "Av. Larco / Calle Schell"},
-    {"id": "3", "lat": -12.1278, "lon": -77.0323, "name": "Av. Larco / Av. Benavides"},
-    {"id": "4", "lat": -12.1305, "lon": -77.0343, "name": "Larcomar"},
-    {"id": "5", "lat": -12.1189, "lon": -77.0307, "name": "Av. Pardo / Av. Arequipa"},
-    {"id": "6", "lat": -12.1165, "lon": -77.0345, "name": "Av. Pardo / Cmdte. Espinar"},
-    {"id": "7", "lat": -12.125, "lon": -77.041, "name": "Parque del Amor"},
-    {"id": "8", "lat": -12.129, "lon": -77.028, "name": "Av. Benavides / P. de la Rep."},
-    {"id": "9", "lat": -12.123, "lon": -77.037, "name": "Malecón Balta / Bellavista"}
+    {"id": "A", "lat": -12.1213, "lon": -77.0305, "name": "Óvalo de Miraflores"},
+    {"id": "B", "lat": -12.1225, "lon": -77.0300, "name": "Larco / Schell"},
+    {"id": "C", "lat": -12.1245, "lon": -77.0290, "name": "Larco / Benavides"},
+    {"id": "D", "lat": -12.1220, "lon": -77.0315, "name": "Diagonal / Schell"},
+    {"id": "E", "lat": -12.1255, "lon": -77.0280, "name": "Benavides / La Paz"},
+    {"id": "F", "lat": -12.1235, "lon": -77.0285, "name": "Schell / La Paz"}
   ],
   "edges": [
-    {"source": "1", "target": "2", "length": 450, "peligrosidad": 4.0},
-    {"source": "2", "target": "1", "length": 450, "peligrosidad": 4.0},
+    {"source": "A", "target": "B", "length": 140, "peligrosidad": 4.5},
+    {"source": "B", "target": "A", "length": 140, "peligrosidad": 4.5},
 
-    {"source": "1", "target": "5", "length": 300, "peligrosidad": 3.5},
-    {"source": "5", "target": "1", "length": 300, "peligrosidad": 3.5},
-
-    {"source": "2", "target": "3", "length": 350, "peligrosidad": 4.2},
-    {"source": "3", "target": "2", "length": 350, "peligrosidad": 4.2},
-
-    {"source": "3", "target": "4", "length": 400, "peligrosidad": 3.0},
-    {"source": "4", "target": "3", "length": 400, "peligrosidad": 3.0},
-
-    {"source": "5", "target": "6", "length": 500, "peligrosidad": 4.5},
-    {"source": "6", "target": "5", "length": 500, "peligrosidad": 4.5},
-
-    {"source": "3", "target": "8", "length": 550, "peligrosidad": 4.8},
-    {"source": "8", "target": "3", "length": 550, "peligrosidad": 4.8},
-
-    {"source": "6", "target": "9", "length": 600, "peligrosidad": 2.5},
-    {"source": "9", "target": "6", "length": 600, "peligrosidad": 2.5},
-
-    {"source": "9", "target": "7", "length": 500, "peligrosidad": 1.5},
-    {"source": "7", "target": "9", "length": 500, "peligrosidad": 1.5},
-
-    {"source": "7", "target": "4", "length": 650, "peligrosidad": 1.8},
-    {"source": "4", "target": "7", "length": 650, "peligrosidad": 1.8},
-
-    {"source": "2", "target": "8", "length": 300, "peligrosidad": 2.8},
-    {"source": "8", "target": "2", "length": 300, "peligrosidad": 2.8}
+    {"source": "B", "target": "C", "length": 240, "peligrosidad": 4.8},
+    {"source": "C", "target": "B", "length": 240, "peligrosidad": 4.8},
+    
+    {"source": "A", "target": "D", "length": 120, "peligrosidad": 4.0},
+    {"source": "D", "target": "A", "length": 120, "peligrosidad": 4.0},
+    
+    {"source": "B", "target": "D", "length": 170, "peligrosidad": 3.5},
+    {"source": "D", "target": "B", "length": 170, "peligrosidad": 3.5},
+    
+    {"source": "B", "target": "F", "length": 150, "peligrosidad": 2.0},
+    {"source": "F", "target": "B", "length": 150, "peligrosidad": 2.0},
+    
+    {"source": "C", "target": "E", "length": 120, "peligrosidad": 5.0},
+    {"source": "E", "target": "C", "length": 120, "peligrosidad": 5.0},
+    
+    {"source": "F", "target": "E", "length": 230, "peligrosidad": 1.5},
+    {"source": "E", "target": "F", "length": 230, "peligrosidad": 1.5}
   ]
 }
