@@ -6,52 +6,51 @@ import React from 'react';
 import { APIProvider, Map, Marker, InfoWindow, useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
 import type { District, PathSegment } from '@/types'; 
 import { getDangerColor, getDangerStrokeWeight } from '@/lib/graph';
-import { MapPin } from 'lucide-react';
 
-// Refactored component to render the entire path with a single Directions API call using waypoints
+// This component renders the calculated path by drawing individual, colored polylines for each segment.
+// It makes a single efficient Directions API call to get the geometry for the whole route.
 const PathRenderer: React.FC<{ pathSegments: PathSegment[] }> = ({ pathSegments }) => {
-  const map = useMap(); 
+  const map = useMap();
   const routesLibrary = useMapsLibrary('routes');
   const directionsServiceRef = React.useRef<google.maps.DirectionsService | null>(null);
-  const directionsRendererRef = React.useRef<google.maps.DirectionsRenderer | null>(null);
+  // This ref will hold the polylines we draw on the map so we can clean them up
+  const drawnPolylinesRef = React.useRef<google.maps.Polyline[]>([]);
 
   React.useEffect(() => {
-    if (!map || !routesLibrary || typeof google === 'undefined' || !google.maps) {
-      console.error('[PathRenderer] Google Maps API or required libraries not available.');
+    // Exit if the map, routes library, or path segments aren't ready
+    if (!map || !routesLibrary || !pathSegments) {
       return;
     }
 
+    // Initialize the directions service once
     if (!directionsServiceRef.current) {
-      directionsServiceRef.current = new google.maps.DirectionsService();
+      directionsServiceRef.current = new routesLibrary.DirectionsService();
     }
-    if (!directionsRendererRef.current) {
-      directionsRendererRef.current = new google.maps.DirectionsRenderer({
-        suppressMarkers: true, // We use our own markers
-        polylineOptions: {
-            strokeColor: getDangerColor(3), // Default color, can be adjusted
-            strokeOpacity: 0.9,
-            strokeWeight: 6,
-        }
-      });
-    }
-    
-    const directionsRenderer = directionsRendererRef.current;
-    directionsRenderer.setMap(map);
 
-    if (!pathSegments || pathSegments.length === 0) {
-      directionsRenderer.setDirections({routes: []}); // Clear the route from the map
+    // --- Cleanup function to remove old polylines from the map ---
+    const cleanup = () => {
+      drawnPolylinesRef.current.forEach(polyline => polyline.setMap(null));
+      drawnPolylinesRef.current = [];
+    };
+
+    // If there are no segments, just clean up any old route and exit
+    if (pathSegments.length === 0) {
+      cleanup();
       return;
     }
 
     const directionsService = directionsServiceRef.current;
-    
+
+    // --- Build the request for the Directions API ---
+    // We use waypoints to get a route that passes through all intermediate districts.
     const origin = pathSegments[0].from;
     const destination = pathSegments[pathSegments.length - 1].to;
     
-    // Waypoints are all the intermediate points in the path
+    // Waypoints are all the intermediate points in the path.
+    // 'stopover: true' is crucial to ensure the API returns a separate "leg" for each segment.
     const waypoints: google.maps.DirectionsWaypoint[] = pathSegments.slice(0, -1).map(segment => ({
       location: { lat: segment.to.lat, lng: segment.to.lng },
-      stopover: false // true if you want a marker for each waypoint, false for just routing through
+      stopover: true 
     }));
 
     const request: google.maps.DirectionsRequest = {
@@ -61,27 +60,51 @@ const PathRenderer: React.FC<{ pathSegments: PathSegment[] }> = ({ pathSegments 
       travelMode: google.maps.TravelMode.DRIVING,
     };
 
+    // --- Make the API call ---
     directionsService.route(request, (result, status) => {
+      // Clear any previous route before drawing a new one
+      cleanup();
+
       if (status === google.maps.DirectionsStatus.OK && result) {
-        directionsRenderer.setDirections(result);
-        // Here you could potentially color segments differently, but it's more complex
-        // with a single DirectionsRenderer. For now, the whole route has one style.
+        const route = result.routes[0];
+        if (!route) return;
+
+        // The result contains 'legs', where each leg corresponds to one of our pathSegments.
+        route.legs.forEach((leg, index) => {
+          const segment = pathSegments[index];
+          if (!segment) return; // Should not happen if API returns correct number of legs
+
+          // Get styling for this specific segment based on its danger level
+          const color = getDangerColor(segment.danger);
+          const weight = getDangerStrokeWeight(segment.danger);
+          
+          // A leg's path is composed of multiple 'steps'. We combine them into a single path.
+          const pathForLeg = leg.steps.flatMap(step => step.path);
+
+          // Create and draw a new Polyline for this leg
+          const polyline = new routesLibrary.Polyline({
+            path: pathForLeg,
+            strokeColor: color,
+            strokeOpacity: 0.9,
+            strokeWeight: weight,
+            map: map,
+          });
+
+          // Store the polyline in our ref so we can clean it up on the next run
+          drawnPolylinesRef.current.push(polyline);
+        });
+
       } else {
         console.error(`[PathRenderer] Directions request failed due to ${status}`);
-        // Clear previous route if the new one fails
-        directionsRenderer.setDirections({routes: []});
       }
     });
 
-    return () => {
-      // Clean up renderer when component unmounts or path changes
-      if (directionsRenderer) {
-        directionsRenderer.setMap(null);
-      }
-    };
-  }, [map, routesLibrary, pathSegments]); 
+    // Return the cleanup function to be called by React when the component unmounts or props change
+    return cleanup;
 
-  return null; 
+  }, [map, routesLibrary, pathSegments]); // Re-run effect if map, library, or path changes
+
+  return null; // This component only renders programmatically on the map, not with JSX
 };
 
 
@@ -120,7 +143,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     // This check ensures google.maps is available before trying to use it.
     if (typeof window !== 'undefined' && window.google && window.google.maps) {
       return {
-        path: 0, // window.google.maps.SymbolPath.CIRCLE
+        path: 0, // 0 is the value for google.maps.SymbolPath.CIRCLE
         scale: 8,
         fillColor: selectedOrigin?.id === district.id ? '#FF9800' : (selectedDestination?.id === district.id ? '#3F51B5' : '#777777'),
         fillOpacity: 1,
