@@ -14,5 +14,36 @@
     { "id": "N11", "lat": -12.124369268111888, "lon": -77.03590360815326, "name": "Intersección 11" },
     { "id": "N12", "lat": -12.124400772221556, "lon": -77.03488679742921, "name": "Intersección 12" }
   ],
-  "edges": []
+  "edges": [
+    {"source": "N1", "target": "N2", "length": 116, "peligrosidad": 2},
+    {"source": "N2", "target": "N1", "length": 116, "peligrosidad": 2},
+    {"source": "N2", "target": "N3", "length": 119, "peligrosidad": 2},
+    {"source": "N3", "target": "N2", "length": 119, "peligrosidad": 2},
+    {"source": "N4", "target": "N5", "length": 71, "peligrosidad": 3},
+    {"source": "N5", "target": "N4", "length": 71, "peligrosidad": 3},
+    {"source": "N5", "target": "N6", "length": 51, "peligrosidad": 2},
+    {"source": "N6", "target": "N5", "length": 51, "peligrosidad": 2},
+    {"source": "N6", "target": "N7", "length": 64, "peligrosidad": 3},
+    {"source": "N7", "target": "N6", "length": 64, "peligrosidad": 3},
+    {"source": "N7", "target": "N8", "length": 56, "peligrosidad": 3},
+    {"source": "N8", "target": "N7", "length": 56, "peligrosidad": 3},
+    {"source": "N10", "target": "N11", "length": 116, "peligrosidad": 2},
+    {"source": "N11", "target": "N10", "length": 116, "peligrosidad": 2},
+    {"source": "N11", "target": "N12", "length": 113, "peligrosidad": 2},
+    {"source": "N12", "target": "N11", "length": 113, "peligrosidad": 2},
+    {"source": "N1", "target": "N4", "length": 119, "peligrosidad": 3},
+    {"source": "N4", "target": "N1", "length": 119, "peligrosidad": 3},
+    {"source": "N2", "target": "N6", "length": 85, "peligrosidad": 4},
+    {"source": "N6", "target": "N2", "length": 85, "peligrosidad": 4},
+    {"source": "N3", "target": "N8", "length": 123, "peligrosidad": 3},
+    {"source": "N8", "target": "N3", "length": 123, "peligrosidad": 3},
+    {"source": "N4", "target": "N10", "length": 113, "peligrosidad": 3},
+    {"source": "N10", "target": "N4", "length": 113, "peligrosidad": 3},
+    {"source": "N6", "target": "N9", "length": 63, "peligrosidad": 4},
+    {"source": "N9", "target": "N6", "length": 63, "peligrosidad": 4},
+    {"source": "N9", "target": "N11", "length": 83, "peligrosidad": 4},
+    {"source": "N11", "target": "N9", "length": 83, "peligrosidad": 4},
+    {"source": "N8", "target": "N12", "length": 114, "peligrosidad": 3},
+    {"source": "N12", "target": "N8", "length": 114, "peligrosidad": 3}
+  ]
 }
