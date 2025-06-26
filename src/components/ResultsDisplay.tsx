@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -10,21 +9,15 @@ import { getDangerColor } from '@/lib/graph';
 
 interface ResultsDisplayProps {
   pathResult: PathResult;
-  // aiAdjustmentReason?: string | null; // Prop removed
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ pathResult /* , aiAdjustmentReason */ }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ pathResult }) => {
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline text-2xl text-primary flex items-center">
           <MapPinned className="mr-2 h-6 w-6" /> Detalles de la Ruta
         </CardTitle>
-        {/* {aiAdjustmentReason && ( // Section removed
-          <CardDescription className="font-code text-sm text-blue-600 dark:text-blue-400">
-            Ajuste IA: {aiAdjustmentReason}
-          </CardDescription>
-        )} */}
       </CardHeader>
       <CardContent className="space-y-4">
         <div>

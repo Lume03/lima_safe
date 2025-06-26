@@ -1,4 +1,5 @@
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/dynamic-risk-assessment.ts';
+// The dynamic risk assessment flow has been removed to simplify the application.
+// This file is kept for potential future Genkit flows.
